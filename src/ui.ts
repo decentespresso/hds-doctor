@@ -1,4 +1,4 @@
-import type { Verdict, TestResult, TestId } from './types'
+import type { Verdict, TestResult, TestId, DebugPacket } from './types'
 import { TEST_DEFINITIONS } from './guided'
 
 type ViewName = 'landing' | 'quick-check' | 'guided' | 'live-monitor' | 'report'
@@ -286,6 +286,135 @@ export const UI = {
         return 'Keep the scale connected and powered on'
       default:
         return 'Follow the on-screen instructions'
+    }
+  },
+
+  // ── Live Monitor ─────────────────────────────────────────────────────────
+
+  renderLiveMonitor(
+    connected: boolean,
+    onStart: (intervalMs: number) => void,
+    onStop: () => void
+  ): void {
+    this.showView('live-monitor', `
+      <div class="view-header">
+        <button id="back-btn" class="back-btn">&#8592; Back</button>
+        <h2>Live Monitor</h2>
+      </div>
+      <div class="lm-controls">
+        <label for="poll-interval-select">Poll interval:</label>
+        <select id="poll-interval-select" class="lm-select">
+          <option value="50">50 ms</option>
+          <option value="100" selected>100 ms</option>
+          <option value="200">200 ms</option>
+          <option value="500">500 ms</option>
+          <option value="1000">1000 ms</option>
+        </select>
+        ${connected
+          ? `<button id="lm-toggle-btn" class="primary-btn" data-running="false">Start Streaming</button>`
+          : `<p class="connect-hint">Connect a device first to start streaming.</p>`
+        }
+      </div>
+      <div id="lm-data-panel" class="lm-data-panel" style="display:none;">
+        <div class="lm-metrics-grid">
+          <div class="lm-metric"><span class="lm-metric-label">Raw Value</span><span id="lm-raw" class="lm-metric-value">—</span></div>
+          <div class="lm-metric"><span class="lm-metric-label">Smoothed</span><span id="lm-smoothed" class="lm-metric-value">—</span></div>
+          <div class="lm-metric"><span class="lm-metric-label">Tare Offset</span><span id="lm-tare" class="lm-metric-value">—</span></div>
+          <div class="lm-metric"><span class="lm-metric-label">Std Dev</span><span id="lm-stddev" class="lm-metric-value">—</span></div>
+          <div class="lm-metric"><span class="lm-metric-label">SPS</span><span id="lm-sps" class="lm-metric-value">—</span></div>
+          <div class="lm-metric"><span class="lm-metric-label">Conv Time</span><span id="lm-conv" class="lm-metric-value">—</span></div>
+        </div>
+        <div class="lm-flags">
+          <span class="lm-flag"><span id="flag-oor" class="lm-flag-dot"></span> OutOfRange</span>
+          <span class="lm-flag"><span id="flag-timeout" class="lm-flag-dot"></span> Timeout</span>
+          <span class="lm-flag"><span id="flag-tare" class="lm-flag-dot"></span> TareInProgress</span>
+        </div>
+        <div class="lm-stats-grid">
+          <div class="lm-metric"><span class="lm-metric-label">Min</span><span id="lm-min" class="lm-metric-value">—</span></div>
+          <div class="lm-metric"><span class="lm-metric-label">Max</span><span id="lm-max" class="lm-metric-value">—</span></div>
+          <div class="lm-metric"><span class="lm-metric-label">Avg</span><span id="lm-avg" class="lm-metric-value">—</span></div>
+          <div class="lm-metric"><span class="lm-metric-label">Range</span><span id="lm-range" class="lm-metric-value">—</span></div>
+        </div>
+        <div class="lm-history-wrap">
+          <table class="lm-history-table">
+            <thead>
+              <tr><th>Time (ms)</th><th>Raw</th><th>Smoothed</th><th>Std Dev</th></tr>
+            </thead>
+            <tbody id="lm-history-body"></tbody>
+          </table>
+        </div>
+      </div>
+    `, () => {
+      document.getElementById('back-btn')?.addEventListener('click', () => {
+        onStop()
+        this.onNavigate?.('landing')
+      })
+      if (connected) {
+        const toggleBtn = document.getElementById('lm-toggle-btn') as HTMLButtonElement | null
+        toggleBtn?.addEventListener('click', () => {
+          const running = toggleBtn.dataset.running === 'true'
+          if (running) {
+            onStop()
+            toggleBtn.dataset.running = 'false'
+            toggleBtn.textContent = 'Start Streaming'
+          } else {
+            const select = document.getElementById('poll-interval-select') as HTMLSelectElement
+            const intervalMs = parseInt(select.value, 10)
+            const panel = document.getElementById('lm-data-panel')
+            if (panel) panel.style.display = 'block'
+            onStart(intervalMs)
+            toggleBtn.dataset.running = 'true'
+            toggleBtn.textContent = 'Stop Streaming'
+          }
+        })
+      }
+    })
+  },
+
+  updateLiveData(packet: DebugPacket): void {
+    const set = (id: string, val: string) => {
+      const el = document.getElementById(id)
+      if (el) el.textContent = val
+    }
+
+    set('lm-raw', String(packet.rawValue))
+    set('lm-smoothed', String(packet.smoothedValue))
+    set('lm-tare', String(packet.tareOffset))
+    set('lm-sps', packet.sps.toFixed(2))
+    set('lm-conv', packet.conversionTime.toFixed(2) + ' ms')
+    set('lm-min', String(packet.dataMin))
+    set('lm-max', String(packet.dataMax))
+    set('lm-avg', String(packet.dataAvg))
+    set('lm-range', String(packet.dataMax - packet.dataMin))
+
+    const stdDevEl = document.getElementById('lm-stddev')
+    if (stdDevEl) {
+      stdDevEl.textContent = packet.dataStdDev.toFixed(1)
+      stdDevEl.className = 'lm-metric-value ' + (
+        packet.dataStdDev < 10 ? 'lm-stddev-good'
+        : packet.dataStdDev <= 50 ? 'lm-stddev-warn'
+        : 'lm-stddev-bad'
+      )
+    }
+
+    const setFlag = (id: string, active: boolean) => {
+      const dot = document.getElementById(id)
+      if (dot) {
+        dot.className = 'lm-flag-dot ' + (active ? 'lm-flag-active' : 'lm-flag-inactive')
+      }
+    }
+    setFlag('flag-oor', packet.dataOutOfRange)
+    setFlag('flag-timeout', packet.signalTimeout)
+    setFlag('flag-tare', packet.tareInProgress)
+
+    const tbody = document.getElementById('lm-history-body') as HTMLTableSectionElement | null
+    if (tbody) {
+      const tr = document.createElement('tr')
+      tr.innerHTML = `<td>${packet.timestamp}</td><td>${packet.rawValue}</td><td>${packet.smoothedValue}</td><td>${packet.dataStdDev.toFixed(1)}</td>`
+      tbody.prepend(tr)
+      while (tbody.rows.length > 50) {
+        tbody.deleteRow(tbody.rows.length - 1)
+      }
     }
   },
 }

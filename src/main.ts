@@ -41,7 +41,17 @@ const App = {
         UI.renderTestPicker((selectedIds) => this.runGuided(selectedIds))
         break
       case 'live-monitor':
-        // Task 10
+        UI.renderLiveMonitor(
+          !!Serial.port,
+          (intervalMs) => {
+            Serial.onPacket = (packet) => UI.updateLiveData(packet)
+            Serial.startPolling(intervalMs)
+          },
+          () => {
+            Serial.stopPolling()
+            Serial.onPacket = null
+          }
+        )
         break
       case 'report':
         // Task 11
