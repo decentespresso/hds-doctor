@@ -14,6 +14,14 @@ import './style.css'
 
 const App = {
   init(): void {
+    if (!('serial' in navigator)) {
+      const appEl = document.getElementById('app')
+      if (appEl) {
+        appEl.textContent = 'Web Serial API not supported. Use Chrome, Edge, or Opera.'
+      }
+      return
+    }
+
     UI.init()
     UI.onConnect = () => this.connect()
     UI.onDisconnect = () => this.disconnect()

@@ -315,3 +315,19 @@
   justify-content: center;
   margin-top: 8px;
 }
+
+/* ── Responsive ───────────────────────────────────────────────────────────── */
+
+@media (max-width: 600px) {
+  .mode-cards { grid-template-columns: 1fr; }
+
+  #connection-bar {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  #connect-btn {
+    margin-left: 0;
+    width: 100%;
+  }
+}
