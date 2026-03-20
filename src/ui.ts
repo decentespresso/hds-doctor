@@ -1,4 +1,4 @@
-import type { Verdict, TestResult, TestId, DebugPacket } from './types'
+import type { Verdict, TestResult, TestId, DebugPacket, Report } from './types'
 import { TEST_DEFINITIONS } from './guided'
 
 type ViewName = 'landing' | 'quick-check' | 'guided' | 'live-monitor' | 'report'
@@ -416,5 +416,81 @@ export const UI = {
         tbody.deleteRow(tbody.rows.length - 1)
       }
     }
+  },
+
+  // ── Report View ───────────────────────────────────────────────────────────
+
+  renderReport(report: Report, onExport: () => void, onRunAgain: () => void): void {
+    this.showView('report', `
+      <div class="view-header">
+        <button id="back-btn" class="back-btn">&#8592; Back</button>
+        <h2>Diagnostic Report</h2>
+      </div>
+      <div class="report-overall">
+        <div class="report-verdict ${`verdict-${report.overallVerdict}`}">
+          ${report.overallVerdict.toUpperCase()}
+        </div>
+        <p class="report-summary">${report.overallSummary}</p>
+        <p class="report-meta">${new Date(report.timestamp).toLocaleString()} &nbsp;·&nbsp; v${report.appVersion}</p>
+      </div>
+      <ul class="report-test-list">
+        ${report.testsRun.map((r, i) => `
+          <li class="report-test-item" id="report-test-${i}">
+            <div class="report-test-header" data-idx="${i}">
+              ${this.verdictBadge(r.verdict)}
+              <span class="report-test-id">${r.testId}</span>
+              <span class="report-test-summary">${r.summary}</span>
+              <span class="report-test-expand">&#9660;</span>
+            </div>
+            <div class="report-test-packets" id="report-packets-${i}" style="display:none;">
+              <table class="report-packets-table">
+                <thead>
+                  <tr><th>Time (ms)</th><th>Raw</th><th>Smoothed</th><th>StdDev</th><th>SPS</th><th>Flags</th></tr>
+                </thead>
+                <tbody>
+                  ${r.rawPackets.map(p => `
+                    <tr>
+                      <td>${p.timestamp}</td>
+                      <td>${p.rawValue}</td>
+                      <td>${p.smoothedValue}</td>
+                      <td>${p.dataStdDev.toFixed(1)}</td>
+                      <td>${p.sps.toFixed(1)}</td>
+                      <td>${[
+                        p.dataOutOfRange ? 'OOR' : '',
+                        p.signalTimeout ? 'TMO' : '',
+                        p.tareInProgress ? 'TARE' : '',
+                      ].filter(Boolean).join(' ') || '—'}</td>
+                    </tr>
+                  `).join('')}
+                </tbody>
+              </table>
+            </div>
+          </li>
+        `).join('')}
+      </ul>
+      <div class="report-actions">
+        <button id="export-btn" class="primary-btn">Export Report (JSON)</button>
+        <button id="run-again-btn" class="primary-btn">Run Again</button>
+      </div>
+    `, () => {
+      document.getElementById('back-btn')?.addEventListener('click', () => {
+        this.onNavigate?.('landing')
+      })
+      document.getElementById('export-btn')?.addEventListener('click', onExport)
+      document.getElementById('run-again-btn')?.addEventListener('click', onRunAgain)
+
+      document.querySelectorAll('.report-test-header').forEach(header => {
+        header.addEventListener('click', () => {
+          const idx = (header as HTMLElement).dataset.idx!
+          const packets = document.getElementById(`report-packets-${idx}`)
+          const arrow = header.querySelector('.report-test-expand') as HTMLElement | null
+          if (packets) {
+            const visible = packets.style.display !== 'none'
+            packets.style.display = visible ? 'none' : 'block'
+            if (arrow) arrow.textContent = visible ? '▼' : '▲'
+          }
+        })
+      })
+    })
   },
 }

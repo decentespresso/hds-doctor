@@ -8,7 +8,8 @@ import {
   overallVerdict,
 } from './diagnostics'
 import { GuidedWizard } from './guided'
-import type { DebugPacket, TestResult, TestId } from './types'
+import { generateReport, parseReport, downloadReport, loadReportFromFile } from './report'
+import type { DebugPacket, TestResult, TestId, Report } from './types'
 import './style.css'
 
 const App = {
@@ -54,7 +55,9 @@ const App = {
         )
         break
       case 'report':
-        // Task 11
+        loadReportFromFile().then(report => {
+          if (report) this.showReport(report)
+        })
         break
     }
   },
@@ -161,9 +164,25 @@ const App = {
       wizard.advance() // result -> next instruction or done
     }
 
-    // All tests complete — log results (Task 11 will render the report view)
-    console.log('Guided diagnostics complete', allResults)
-    // TODO Task 11: navigate to report view with allResults
+    // All tests complete — navigate to report view
+    const overall = overallVerdict(allResults)
+    const summaryText = overall === 'pass' ? 'Scale hardware appears healthy'
+      : overall === 'warning' ? 'Some issues detected'
+      : 'Problems detected'
+    const reportJson = generateReport(allResults, overall, summaryText)
+    const report = parseReport(reportJson)!
+    this.showReport(report)
+  },
+
+  showReport(report: Report): void {
+    UI.renderReport(
+      report,
+      () => {
+        const { generateReport: gen, downloadReport: dl } = { generateReport, downloadReport }
+        dl(gen(report.testsRun, report.overallVerdict, report.overallSummary, report.deviceInfo))
+      },
+      () => this.navigate('guided')
+    )
   },
 
   async _collectPackets(
