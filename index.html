@@ -10,16 +10,16 @@
 </head>
 <body>
     <!-- Connection bar -->
-    <div id="connection-bar">
-        <div id="status-indicator" class="status-dot disconnected"></div>
+    <header id="connection-bar">
+        <div id="status-indicator" class="status-dot disconnected" role="status" aria-label="Disconnected"></div>
         <span id="status-text">No device connected</span>
         <button id="connect-btn" class="button special small">Connect</button>
-    </div>
+    </header>
 
     <!-- Content area -->
-    <div id="app" class="page-container">
+    <main id="app" class="page-container">
         <!-- Views injected by ui.ts -->
-    </div>
+    </main>
 
     <script type="module" src="/src/main.ts"></script>
 </body>

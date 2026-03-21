@@ -62,8 +62,7 @@ const App = {
           !!Serial.port,
           async (intervalMs, sampleCount) => {
             await Serial.setSampleCount(sampleCount)
-            const panel = document.getElementById('lm-data-panel')
-            if (panel) panel.style.display = 'block'
+            document.getElementById('lm-data-panel')?.classList.remove('hidden')
             UI.initChart()
             Serial.onPacket = (packet) => {
               UI.updateLiveData(packet)

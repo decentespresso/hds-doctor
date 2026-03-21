@@ -35,6 +35,7 @@ export const UI = {
     if (dot) {
       dot.classList.toggle('connected', connected)
       dot.classList.toggle('disconnected', !connected)
+      dot.setAttribute('aria-label', connected ? 'Connected' : 'Disconnected')
     }
     if (text) {
       if (connected && deviceInfo) {
@@ -55,18 +56,19 @@ export const UI = {
 
   renderLanding(): void {
     this.showView('landing', `
+      <h1>HDS Doctor</h1>
       <div class="mode-cards">
-        <div class="mode-card" data-mode="quick-check">
+        <div class="mode-card" data-mode="quick-check" role="button" tabindex="0">
           <div class="mode-card-icon">&#9889;</div>
           <div class="mode-card-title">Quick Check</div>
-          <div class="mode-card-desc">30-second automated test</div>
+          <div class="mode-card-desc">10-second automated test</div>
         </div>
-        <div class="mode-card" data-mode="guided">
+        <div class="mode-card" data-mode="guided" role="button" tabindex="0">
           <div class="mode-card-icon">&#128270;</div>
           <div class="mode-card-title">Guided Diagnostics</div>
           <div class="mode-card-desc">Step-by-step with physical tests</div>
         </div>
-        <div class="mode-card" data-mode="live-monitor">
+        <div class="mode-card" data-mode="live-monitor" role="button" tabindex="0">
           <div class="mode-card-icon">&#128200;</div>
           <div class="mode-card-title">Live Monitor</div>
           <div class="mode-card-desc">Real-time data stream</div>
@@ -77,9 +79,16 @@ export const UI = {
       </div>
     `, () => {
       this.appEl!.querySelectorAll('.mode-card').forEach(card => {
-        card.addEventListener('click', () => {
+        const handler = () => {
           const mode = (card as HTMLElement).dataset.mode as ViewName
           this.onNavigate?.(mode)
+        }
+        card.addEventListener('click', handler)
+        card.addEventListener('keydown', (e) => {
+          if ((e as KeyboardEvent).key === 'Enter' || (e as KeyboardEvent).key === ' ') {
+            e.preventDefault()
+            handler()
+          }
         })
       })
       document.getElementById('load-report-btn')?.addEventListener('click', () => {
@@ -106,13 +115,13 @@ export const UI = {
           : `<p class="connect-hint">Connect a device first to run a quick check.</p>`
         }
       </div>
-      <div id="qc-progress" style="display:none;">
-        <div class="progress-bar-wrap">
+      <div id="qc-progress" class="hidden">
+        <div class="progress-bar-wrap" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" id="qc-progress-wrap">
           <div id="qc-progress-bar" class="progress-bar" style="width:0%"></div>
         </div>
-        <p id="qc-status-text" class="status-text"></p>
+        <p id="qc-status-text" class="status-text" aria-live="polite"></p>
       </div>
-      <div id="qc-result" style="display:none;"></div>
+      <div id="qc-result" class="hidden"></div>
     `, () => {
       document.getElementById('back-btn')?.addEventListener('click', () => {
         this.onNavigate?.('landing')
@@ -124,25 +133,22 @@ export const UI = {
   },
 
   showQuickCheckProgress(percent: number, status: string): void {
-    const action = document.getElementById('qc-action')
-    const progress = document.getElementById('qc-progress')
+    document.getElementById('qc-action')?.classList.add('hidden')
+    document.getElementById('qc-progress')?.classList.remove('hidden')
     const bar = document.getElementById('qc-progress-bar')
-    const statusText = document.getElementById('qc-status-text')
-
-    if (action) action.style.display = 'none'
-    if (progress) progress.style.display = 'block'
     if (bar) bar.style.width = `${percent}%`
+    const wrap = document.getElementById('qc-progress-wrap')
+    if (wrap) wrap.setAttribute('aria-valuenow', String(Math.round(percent)))
+    const statusText = document.getElementById('qc-status-text')
     if (statusText) statusText.textContent = status
   },
 
   showQuickCheckResult(results: TestResult[], overall: Verdict, summary: string): void {
-    const progress = document.getElementById('qc-progress')
+    document.getElementById('qc-progress')?.classList.add('hidden')
     const resultEl = document.getElementById('qc-result')
-
-    if (progress) progress.style.display = 'none'
     if (!resultEl) return
 
-    resultEl.style.display = 'block'
+    resultEl.classList.remove('hidden')
     resultEl.innerHTML = `
       <div class="result-overall">
         <span>Overall: </span>${this.verdictBadge(overall)}
@@ -239,6 +245,8 @@ export const UI = {
     if (bar && countEl) {
       bar.style.width = `${percent}%`
       countEl.textContent = `${sampleCount} samples collected`
+      const wrap = document.getElementById('wizard-progress-wrap')
+      if (wrap) wrap.setAttribute('aria-valuenow', String(Math.round(percent)))
       return
     }
     // First render
@@ -248,10 +256,10 @@ export const UI = {
       </div>
       <div class="wizard-collecting">
         <p class="collecting-label">Collecting data…</p>
-        <div class="progress-bar-wrap">
+        <div class="progress-bar-wrap" role="progressbar" aria-valuenow="${Math.round(percent)}" aria-valuemin="0" aria-valuemax="100" id="wizard-progress-wrap">
           <div id="wizard-progress-bar" class="progress-bar" style="width:${percent}%"></div>
         </div>
-        <p id="wizard-sample-count" class="status-text">${sampleCount} samples collected</p>
+        <p id="wizard-sample-count" class="status-text" aria-live="polite">${sampleCount} samples collected</p>
       </div>
     `)
   },
@@ -344,7 +352,7 @@ export const UI = {
           : `<p class="connect-hint">Connect a device first to start streaming.</p>`
         }
       </div>
-      <div id="lm-data-panel" class="lm-data-panel" style="display:none;">
+      <div id="lm-data-panel" class="lm-data-panel hidden">
         <div class="lm-metrics-grid">
           <div class="lm-metric"><span class="lm-metric-label">Raw Value</span><span id="lm-raw" class="lm-metric-value">—</span></div>
           <div class="lm-metric"><span class="lm-metric-label">Smoothed</span><span id="lm-smoothed" class="lm-metric-value">—</span></div>
@@ -468,13 +476,13 @@ export const UI = {
       <ul class="report-test-list">
         ${report.testsRun.map((r, i) => `
           <li class="report-test-item" id="report-test-${i}">
-            <div class="report-test-header" data-idx="${i}">
+            <div class="report-test-header" data-idx="${i}" role="button" tabindex="0" aria-expanded="false" aria-controls="report-packets-${i}">
               ${this.verdictBadge(r.verdict)}
               <span class="report-test-id">${r.testId}</span>
               <span class="report-test-summary">${r.summary}</span>
               <span class="report-test-expand">&#9660;</span>
             </div>
-            <div class="report-test-packets" id="report-packets-${i}" style="display:none;">
+            <div class="report-test-packets hidden" id="report-packets-${i}">
               <table class="report-packets-table">
                 <thead>
                   <tr><th>Time (ms)</th><th>Raw</th><th>Smoothed</th><th>StdDev</th><th>SPS</th><th>Flags</th></tr>
@@ -512,14 +520,22 @@ export const UI = {
       document.getElementById('run-again-btn')?.addEventListener('click', onRunAgain)
 
       document.querySelectorAll('.report-test-header').forEach(header => {
-        header.addEventListener('click', () => {
+        const toggle = () => {
           const idx = (header as HTMLElement).dataset.idx!
           const packets = document.getElementById(`report-packets-${idx}`)
           const arrow = header.querySelector('.report-test-expand') as HTMLElement | null
           if (packets) {
-            const visible = packets.style.display !== 'none'
-            packets.style.display = visible ? 'none' : 'block'
-            if (arrow) arrow.textContent = visible ? '▼' : '▲'
+            const expanded = !packets.classList.contains('hidden')
+            packets.classList.toggle('hidden')
+            ;(header as HTMLElement).setAttribute('aria-expanded', String(!expanded))
+            if (arrow) arrow.textContent = expanded ? '\u25BC' : '\u25B2'
+          }
+        }
+        header.addEventListener('click', toggle)
+        header.addEventListener('keydown', (e) => {
+          if ((e as KeyboardEvent).key === 'Enter' || (e as KeyboardEvent).key === ' ') {
+            e.preventDefault()
+            toggle()
           }
         })
       })

@@ -7,6 +7,7 @@ export const LiveChart = {
   plot: null as uPlot | null,
   data: [[], [], []] as [number[], number[], number[]],  // [timestamps, smoothed, stdDev]
   startTime: 0,
+  resizeObserver: null as ResizeObserver | null,
 
   init(container: HTMLElement): void {
     this.destroy()
@@ -59,12 +60,12 @@ export const LiveChart = {
     this.plot = new uPlot(opts, this.data, container)
 
     // Handle resize
-    const ro = new ResizeObserver((entries) => {
+    this.resizeObserver = new ResizeObserver((entries) => {
       for (const entry of entries) {
         this.plot?.setSize({ width: entry.contentRect.width, height: 250 })
       }
     })
-    ro.observe(container)
+    this.resizeObserver.observe(container)
   },
 
   addPoint(timestamp: number, smoothed: number, stdDev: number): void {
@@ -88,6 +89,8 @@ export const LiveChart = {
   },
 
   destroy(): void {
+    this.resizeObserver?.disconnect()
+    this.resizeObserver = null
     this.plot?.destroy()
     this.plot = null
     this.data = [[], [], []]

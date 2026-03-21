@@ -103,6 +103,15 @@
 .verdict-warning { color: #e67700; font-weight: 700; }
 .verdict-fail    { color: #c92a2a; font-weight: 700; }
 
+/* ── Focus indicators ─────────────────────────────────────────────────────── */
+
+.mode-card:focus-visible,
+.report-test-header:focus-visible,
+.back-btn:focus-visible {
+    outline: 2px solid #47cdd9;
+    outline-offset: 2px;
+}
+
 /* ── Hidden utility ───────────────────────────────────────────────────────── */
 
 .hidden { display: none; }
