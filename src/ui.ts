@@ -95,7 +95,7 @@ export const UI = {
       </div>
       <div id="qc-action">
         ${connected
-          ? `<button id="run-btn" class="primary-btn">Run Quick Check</button>`
+          ? `<button id="run-btn" class="button special">Run Quick Check</button>`
           : `<p class="connect-hint">Connect a device first to run a quick check.</p>`
         }
       </div>
@@ -150,7 +150,7 @@ export const UI = {
           </li>
         `).join('')}
       </ul>
-      <button id="run-again-btn" class="primary-btn">Run Again</button>
+      <button id="run-again-btn" class="button special">Run Again</button>
     `
     document.getElementById('run-again-btn')?.addEventListener('click', () => {
       this.onNavigate?.('quick-check')
@@ -177,7 +177,7 @@ export const UI = {
           </li>
         `).join('')}
       </ul>
-      <button id="start-guided-btn" class="primary-btn">Start</button>
+      <button id="start-guided-btn" class="button special">Start</button>
     `, () => {
       document.getElementById('back-btn')?.addEventListener('click', () => {
         this.onNavigate?.('landing')
@@ -207,7 +207,7 @@ export const UI = {
         <h3>${testName}</h3>
         <p class="wizard-desc">${description}</p>
         <p class="wizard-instruction-text">${this._instructionText(testName)}</p>
-        <button id="ready-btn" class="primary-btn">Ready</button>
+        <button id="ready-btn" class="button special">Ready</button>
       </div>
     `, () => {
       document.getElementById('ready-btn')?.addEventListener('click', onReady)
@@ -245,7 +245,7 @@ export const UI = {
       </div>
       <div class="wizard-mid-action">
         <p class="wizard-instruction-text">Now place a weight on the scale</p>
-        <button id="confirm-btn" class="primary-btn">Confirm</button>
+        <button id="confirm-btn" class="button special">Confirm</button>
       </div>
     `, () => {
       document.getElementById('confirm-btn')?.addEventListener('click', onConfirm)
@@ -267,7 +267,7 @@ export const UI = {
           ${this.verdictBadge(result.verdict)}
           <p class="result-summary">${result.summary}</p>
         </div>
-        <button id="next-btn" class="primary-btn">${isLast ? 'Finish' : 'Next Test'}</button>
+        <button id="next-btn" class="button special">${isLast ? 'Finish' : 'Next Test'}</button>
       </div>
     `, () => {
       document.getElementById('next-btn')?.addEventListener('click', onNext)
@@ -311,7 +311,7 @@ export const UI = {
           <option value="1000">1000 ms</option>
         </select>
         ${connected
-          ? `<button id="lm-toggle-btn" class="primary-btn" data-running="false">Start Streaming</button>`
+          ? `<button id="lm-toggle-btn" class="button special" data-running="false">Start Streaming</button>`
           : `<p class="connect-hint">Connect a device first to start streaming.</p>`
         }
       </div>
@@ -469,8 +469,8 @@ export const UI = {
         `).join('')}
       </ul>
       <div class="report-actions">
-        <button id="export-btn" class="primary-btn">Export Report (JSON)</button>
-        <button id="run-again-btn" class="primary-btn">Run Again</button>
+        <button id="export-btn" class="button special">Export Report (JSON)</button>
+        <button id="run-again-btn" class="button special">Run Again</button>
       </div>
     `, () => {
       document.getElementById('back-btn')?.addEventListener('click', () => {
