@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { decodeDebugPacket, computeChecksum } from '../src/decoder'
+import { decodeDebugPacket, computeChecksum, decodeLedResponse } from '../src/decoder'
 
 function buildPacket(overrides: Partial<Record<string, number>> = {}): Uint8Array {
   const buf = new ArrayBuffer(41)
@@ -105,5 +105,31 @@ describe('decodeDebugPacket', () => {
     const packet = buildPacket({ rawValue: -12345 })
     const result = decodeDebugPacket(packet)
     expect(result!.rawValue).toBe(-12345)
+  })
+})
+
+describe('decodeLedResponse', () => {
+  it('decodes firmware version from BCD', () => {
+    // FW 3.0.7: verHigh=0x03, verLow=0x07
+    const data = new Uint8Array([0x03, 0x0A, 0x00, 0x00, 0x64, 0x03, 0x07])
+    const result = decodeLedResponse(data)
+    expect(result).not.toBeNull()
+    expect(result!.firmwareVersion).toBe('3.0.7')
+    expect(result!.battery).toBe(100)
+  })
+
+  it('detects charging state', () => {
+    const data = new Uint8Array([0x03, 0x0A, 0x00, 0x00, 0xFF, 0x03, 0x07])
+    const result = decodeLedResponse(data)
+    expect(result!.battery).toBe(-1)
+  })
+
+  it('returns null for wrong header', () => {
+    const data = new Uint8Array([0x03, 0x25, 0x00, 0x00, 0x00, 0x00, 0x00])
+    expect(decodeLedResponse(data)).toBeNull()
+  })
+
+  it('returns null for wrong length', () => {
+    expect(decodeLedResponse(new Uint8Array(5))).toBeNull()
   })
 })

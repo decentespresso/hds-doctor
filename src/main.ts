@@ -27,7 +27,11 @@ const App = {
     UI.onConnect = () => this.connect()
     UI.onDisconnect = () => this.disconnect()
     UI.onNavigate = (view) => this.navigate(view)
-    Serial.onStatus = (connected) => UI.setConnected(connected)
+    Serial.onLedResponse = (info) => {
+      Serial.deviceInfo = info
+      UI.setConnected(true, info)
+    }
+    Serial.onStatus = (connected) => UI.setConnected(connected, connected ? Serial.deviceInfo : null)
     UI.renderLanding()
   },
 
@@ -190,7 +194,10 @@ const App = {
     const summaryText = overall === 'pass' ? 'Scale hardware appears healthy'
       : overall === 'warning' ? 'Some issues detected'
       : 'Problems detected'
-    const reportJson = generateReport(allResults, overall, summaryText)
+    const reportJson = generateReport(allResults, overall, summaryText, Serial.deviceInfo ? {
+      firmwareVersion: Serial.deviceInfo.firmwareVersion,
+      battery: Serial.deviceInfo.battery,
+    } : undefined)
     const report = parseReport(reportJson)!
     this.showReport(report)
   },

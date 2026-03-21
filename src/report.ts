@@ -6,7 +6,7 @@ export function generateReport(
   testsRun: TestResult[],
   overallVerdict: Verdict,
   overallSummary: string,
-  deviceInfo?: { mac?: string; chip?: string },
+  deviceInfo?: { firmwareVersion?: string; battery?: number },
 ): string {
   const report: Report = {
     appVersion: APP_VERSION,

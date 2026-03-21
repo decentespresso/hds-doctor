@@ -4,6 +4,30 @@ const HEADER_0 = 0x03
 const HEADER_1 = 0x25
 const PACKET_LENGTH = 41
 
+export interface LedResponse {
+  firmwareVersion: string  // e.g., "3.0.7"
+  battery: number          // 0-100, or -1 if charging
+}
+
+export function decodeLedResponse(data: Uint8Array): LedResponse | null {
+  if (data.length !== 7) return null
+  if (data[0] !== 0x03 || data[1] !== 0x0A) return null
+
+  const verHigh = data[5]
+  const verLow = data[6]
+  const major = ((verHigh >> 4) * 10) + (verHigh & 0x0F)
+  const minor = (verLow >> 4)
+  const patch = (verLow & 0x0F)
+
+  const batteryByte = data[4]
+  const battery = batteryByte === 0xFF ? -1 : batteryByte
+
+  return {
+    firmwareVersion: `${major}.${minor}.${patch}`,
+    battery,
+  }
+}
+
 export function computeChecksum(data: Uint8Array): number {
   let checksum = 0
   for (let i = 0; i < 40; i++) {

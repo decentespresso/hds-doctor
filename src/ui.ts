@@ -30,13 +30,19 @@ export const UI = {
     })
   },
 
-  setConnected(connected: boolean): void {
+  setConnected(connected: boolean, deviceInfo?: { firmwareVersion: string; battery: number } | null): void {
     const { dot, text, btn } = this.connectionBar
     if (dot) {
       dot.classList.toggle('connected', connected)
       dot.classList.toggle('disconnected', !connected)
     }
-    if (text) text.textContent = connected ? 'Connected' : 'No device connected'
+    if (text) {
+      if (connected && deviceInfo) {
+        text.textContent = `Connected — FW ${deviceInfo.firmwareVersion} — Battery: ${deviceInfo.battery === -1 ? 'Charging' : deviceInfo.battery + '%'}`
+      } else {
+        text.textContent = connected ? 'Connected' : 'No device connected'
+      }
+    }
     if (btn) btn.textContent = connected ? 'Disconnect' : 'Connect'
   },
 

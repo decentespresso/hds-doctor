@@ -30,7 +30,7 @@ export interface TestResult {
 export interface Report {
   appVersion: string
   timestamp: string        // ISO 8601
-  deviceInfo?: { mac?: string; chip?: string }
+  deviceInfo?: { firmwareVersion?: string; battery?: number }
   testsRun: TestResult[]
   overallVerdict: Verdict
   overallSummary: string
