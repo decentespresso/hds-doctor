@@ -193,9 +193,9 @@ export const UI = {
       <div class="picker-settings">
         <label for="guided-sample-count">Samples per reading:</label>
         <select id="guided-sample-count" class="lm-select">
-          <option value="1">1</option>
+          <option value="1" selected>1</option>
           <option value="2">2</option>
-          <option value="4" selected>4</option>
+          <option value="4">4</option>
         </select>
         <span class="settings-warning">Only change this if you know what you are doing</span>
       </div>
@@ -340,9 +340,9 @@ export const UI = {
       <div class="lm-controls">
         <label for="sample-count-select">Samples:</label>
         <select id="sample-count-select" class="lm-select">
-          <option value="1">1</option>
+          <option value="1" selected>1</option>
           <option value="2">2</option>
-          <option value="4" selected>4</option>
+          <option value="4">4</option>
         </select>
         <span class="settings-warning">Only change this if you know what you are doing</span>
       </div>
