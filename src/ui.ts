@@ -38,7 +38,7 @@ export const UI = {
     }
     if (text) {
       if (connected && deviceInfo) {
-        text.textContent = `Connected — FW ${deviceInfo.firmwareVersion} — Battery: ${deviceInfo.battery === -1 ? 'Charging' : deviceInfo.battery + '%'}`
+        text.textContent = `Connected — FW ${deviceInfo.firmwareVersion}`
       } else {
         text.textContent = connected ? 'Connected' : 'No device connected'
       }
