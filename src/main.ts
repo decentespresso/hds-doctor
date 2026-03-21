@@ -115,7 +115,7 @@ const App = {
     const overall = overallVerdict(results)
     const summary = `Tested ${packets.length} packets in 10 seconds`
 
-    UI.showQuickCheckResult(results, overall, summary)
+    UI.showQuickCheckResult(results, overall, summary, () => this.runQuickCheck())
   },
 
   // ── Guided Diagnostics ───────────────────────────────────────────────────
@@ -141,6 +141,7 @@ const App = {
         test.collectionDurationMs,
         test.name
       )
+      if (!firstPackets) { this.navigate('guided'); return }
       wizard.advance() // collecting -> mid-action (load-cell-bond) or result
 
       let secondPackets: DebugPacket[] = []
@@ -153,11 +154,13 @@ const App = {
         wizard.advance() // mid-action -> collecting
 
         // second collection
-        secondPackets = await this._collectPackets(
+        const loaded = await this._collectPackets(
           test.pollIntervalMs,
           test.collectionDurationMs,
           test.name
         )
+        if (!loaded) { this.navigate('guided'); return }
+        secondPackets = loaded
         wizard.advance() // collecting -> result
       }
 
@@ -212,11 +215,14 @@ const App = {
     )
   },
 
+  _cancelled: false,
+
   async _collectPackets(
     pollIntervalMs: number,
     durationMs: number,
     testName: string
-  ): Promise<DebugPacket[]> {
+  ): Promise<DebugPacket[] | null> {
+    this._cancelled = false
     const packets: DebugPacket[] = []
     const startTime = Date.now()
     const prevOnPacket = Serial.onPacket
@@ -230,11 +236,19 @@ const App = {
 
     Serial.startPolling(pollIntervalMs)
 
-    await new Promise<void>((resolve) => setTimeout(resolve, durationMs))
+    await new Promise<void>((resolve) => {
+      UI.onCancelCollection = () => {
+        this._cancelled = true
+        resolve()
+      }
+      setTimeout(resolve, durationMs)
+    })
 
     Serial.stopPolling()
     Serial.onPacket = prevOnPacket
+    UI.onCancelCollection = null
 
+    if (this._cancelled) return null
     return packets
   },
 }

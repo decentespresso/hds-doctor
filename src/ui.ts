@@ -75,7 +75,7 @@ export const UI = {
         </div>
       </div>
       <div style="text-align:center;">
-        <button id="load-report-btn" class="back-btn">or load a saved report...</button>
+        <button id="load-report-btn" class="button small">Load a saved report</button>
       </div>
     `, () => {
       this.appEl!.querySelectorAll('.mode-card').forEach(card => {
@@ -143,7 +143,7 @@ export const UI = {
     if (statusText) statusText.textContent = status
   },
 
-  showQuickCheckResult(results: TestResult[], overall: Verdict, summary: string): void {
+  showQuickCheckResult(results: TestResult[], overall: Verdict, summary: string, onRunAgain: () => void): void {
     document.getElementById('qc-progress')?.classList.add('hidden')
     const resultEl = document.getElementById('qc-result')
     if (!resultEl) return
@@ -165,9 +165,7 @@ export const UI = {
       </ul>
       <button id="run-again-btn" class="button special">Run Again</button>
     `
-    document.getElementById('run-again-btn')?.addEventListener('click', () => {
-      this.onNavigate?.('quick-check')
-    })
+    document.getElementById('run-again-btn')?.addEventListener('click', onRunAgain)
   },
 
   // ── Guided Diagnostics ───────────────────────────────────────────────────
@@ -238,8 +236,11 @@ export const UI = {
     })
   },
 
-  renderWizardCollecting(testName: string, percent: number, sampleCount: number): void {
+  onCancelCollection: null as (() => void) | null,
+
+  renderWizardCollecting(testName: string, percent: number, sampleCount: number, onCancel?: () => void): void {
     if (this.currentView !== 'guided') return
+    if (onCancel) this.onCancelCollection = onCancel
     const bar = document.getElementById('wizard-progress-bar')
     const countEl = document.getElementById('wizard-sample-count')
     if (bar && countEl) {
@@ -260,8 +261,13 @@ export const UI = {
           <div id="wizard-progress-bar" class="progress-bar" style="width:${percent}%"></div>
         </div>
         <p id="wizard-sample-count" class="status-text" aria-live="polite">${sampleCount} samples collected</p>
+        <button id="cancel-collection-btn" class="back-btn">Cancel</button>
       </div>
-    `)
+    `, () => {
+      document.getElementById('cancel-collection-btn')?.addEventListener('click', () => {
+        this.onCancelCollection?.()
+      })
+    })
   },
 
   renderWizardMidAction(onConfirm: () => void): void {
