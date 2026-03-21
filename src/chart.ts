@@ -48,6 +48,7 @@ export const LiveChart = {
         },
       ],
       scales: {
+        x: { time: false },
         smoothed: { auto: true },
         stddev: { auto: true },
       },
