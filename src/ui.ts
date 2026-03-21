@@ -328,6 +328,12 @@ export const UI = {
           <option value="500">500 ms</option>
           <option value="1000">1000 ms</option>
         </select>
+        ${connected
+          ? `<button id="lm-toggle-btn" class="button special" data-running="false">Start Streaming</button>`
+          : `<p class="connect-hint">Connect a device first to start streaming.</p>`
+        }
+      </div>
+      <div class="lm-controls">
         <label for="sample-count-select">Samples:</label>
         <select id="sample-count-select" class="lm-select">
           <option value="1">1</option>
@@ -335,10 +341,6 @@ export const UI = {
           <option value="4" selected>4</option>
         </select>
         <span class="settings-warning">Only change this if you know what you are doing</span>
-        ${connected
-          ? `<button id="lm-toggle-btn" class="button special" data-running="false">Start Streaming</button>`
-          : `<p class="connect-hint">Connect a device first to start streaming.</p>`
-        }
       </div>
       <div id="lm-data-panel" class="lm-data-panel" style="display:none;">
         <div class="lm-metrics-grid">
