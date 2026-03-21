@@ -1,22 +1,33 @@
 import type { DebugPacket, TestResult, Verdict } from './types'
 
 export function evaluateNoiseStability(packets: DebugPacket[]): TestResult {
-  const avgStdDev = packets.reduce((sum, p) => sum + p.dataStdDev, 0) / packets.length
+  // If firmware-reported std dev is all zero (1-sample mode), compute
+  // standard deviation across raw values from individual packets instead.
+  const fwStdDev = packets.reduce((sum, p) => sum + p.dataStdDev, 0) / packets.length
+  const stdDev = fwStdDev > 0 ? fwStdDev : computeStdDev(packets.map(p => p.rawValue))
+
   let verdict: Verdict
   let summary: string
 
-  if (avgStdDev < 10) {
+  if (stdDev < 10) {
     verdict = 'pass'
-    summary = `Avg std dev ${avgStdDev.toFixed(1)} — excellent stability`
-  } else if (avgStdDev <= 50) {
+    summary = `Std dev ${stdDev.toFixed(1)} — excellent stability`
+  } else if (stdDev <= 50) {
     verdict = 'warning'
-    summary = `Avg std dev ${avgStdDev.toFixed(1)} — some noise detected, check connections`
+    summary = `Std dev ${stdDev.toFixed(1)} — some noise detected, check connections`
   } else {
     verdict = 'fail'
-    summary = `Avg std dev ${avgStdDev.toFixed(1)} — excessive noise, likely hardware issue`
+    summary = `Std dev ${stdDev.toFixed(1)} — excessive noise, likely hardware issue`
   }
 
   return { testId: 'noise-stability', verdict, summary, rawPackets: packets }
+}
+
+function computeStdDev(values: number[]): number {
+  if (values.length === 0) return 0
+  const avg = values.reduce((s, v) => s + v, 0) / values.length
+  const variance = values.reduce((s, v) => s + (v - avg) ** 2, 0) / values.length
+  return Math.sqrt(variance)
 }
 
 export function evaluateConnectionHealth(packets: DebugPacket[]): TestResult {

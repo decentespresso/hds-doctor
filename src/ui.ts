@@ -191,6 +191,7 @@ export const UI = {
           <option value="2">2</option>
           <option value="4" selected>4</option>
         </select>
+        <span class="settings-warning">Only change this if you know what you are doing</span>
       </div>
       <button id="start-guided-btn" class="button special">Start</button>
     `, () => {
@@ -333,6 +334,7 @@ export const UI = {
           <option value="2">2</option>
           <option value="4" selected>4</option>
         </select>
+        <span class="settings-warning">Only change this if you know what you are doing</span>
         ${connected
           ? `<button id="lm-toggle-btn" class="button special" data-running="false">Start Streaming</button>`
           : `<p class="connect-hint">Connect a device first to start streaming.</p>`

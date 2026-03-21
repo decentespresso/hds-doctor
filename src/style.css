@@ -229,6 +229,12 @@
     font-size: 0.8em;
 }
 
+.settings-warning {
+    color: #e67700;
+    font-size: 0.75em;
+    font-style: italic;
+}
+
 /* ── Wizard ───────────────────────────────────────────────────────────────── */
 
 .wizard-instruction,
