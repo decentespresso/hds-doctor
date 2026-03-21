@@ -1,5 +1,6 @@
 import type { Verdict, TestResult, TestId, DebugPacket, Report } from './types'
 import { TEST_DEFINITIONS } from './guided'
+import { LiveChart } from './chart'
 
 type ViewName = 'landing' | 'quick-check' | 'guided' | 'live-monitor' | 'report'
 
@@ -159,7 +160,7 @@ export const UI = {
 
   // ── Guided Diagnostics ───────────────────────────────────────────────────
 
-  renderTestPicker(onStart: (selectedIds: TestId[]) => void): void {
+  renderTestPicker(onStart: (selectedIds: TestId[], sampleCount: 1 | 2 | 4) => void): void {
     this.showView('guided', `
       <div class="view-header">
         <button id="back-btn" class="back-btn">&#8592; Back</button>
@@ -177,6 +178,14 @@ export const UI = {
           </li>
         `).join('')}
       </ul>
+      <div class="picker-settings">
+        <label for="guided-sample-count">Samples per reading:</label>
+        <select id="guided-sample-count" class="lm-select">
+          <option value="1">1</option>
+          <option value="2">2</option>
+          <option value="4" selected>4</option>
+        </select>
+      </div>
       <button id="start-guided-btn" class="button special">Start</button>
     `, () => {
       document.getElementById('back-btn')?.addEventListener('click', () => {
@@ -186,7 +195,9 @@ export const UI = {
         const checked = Array.from(
           document.querySelectorAll<HTMLInputElement>('.test-checkbox:checked')
         ).map(el => el.value as TestId)
-        if (checked.length > 0) onStart(checked)
+        const sampleCountSelect = document.getElementById('guided-sample-count') as HTMLSelectElement
+        const sampleCount = parseInt(sampleCountSelect.value, 10) as 1 | 2 | 4
+        if (checked.length > 0) onStart(checked, sampleCount)
       })
     })
   },
@@ -293,7 +304,7 @@ export const UI = {
 
   renderLiveMonitor(
     connected: boolean,
-    onStart: (intervalMs: number) => void,
+    onStart: (intervalMs: number, sampleCount: 1 | 2 | 4) => void,
     onStop: () => void
   ): void {
     this.showView('live-monitor', `
@@ -309,6 +320,12 @@ export const UI = {
           <option value="200">200 ms</option>
           <option value="500">500 ms</option>
           <option value="1000">1000 ms</option>
+        </select>
+        <label for="sample-count-select">Samples:</label>
+        <select id="sample-count-select" class="lm-select">
+          <option value="1">1</option>
+          <option value="2">2</option>
+          <option value="4" selected>4</option>
         </select>
         ${connected
           ? `<button id="lm-toggle-btn" class="button special" data-running="false">Start Streaming</button>`
@@ -329,6 +346,7 @@ export const UI = {
           <span class="lm-flag"><span id="flag-timeout" class="lm-flag-dot"></span> Timeout</span>
           <span class="lm-flag"><span id="flag-tare" class="lm-flag-dot"></span> TareInProgress</span>
         </div>
+        <div id="lm-chart" class="lm-chart-container"></div>
         <div class="lm-stats-grid">
           <div class="lm-metric"><span class="lm-metric-label">Min</span><span id="lm-min" class="lm-metric-value">—</span></div>
           <div class="lm-metric"><span class="lm-metric-label">Max</span><span id="lm-max" class="lm-metric-value">—</span></div>
@@ -358,11 +376,13 @@ export const UI = {
             toggleBtn.dataset.running = 'false'
             toggleBtn.textContent = 'Start Streaming'
           } else {
-            const select = document.getElementById('poll-interval-select') as HTMLSelectElement
-            const intervalMs = parseInt(select.value, 10)
+            const intervalSelect = document.getElementById('poll-interval-select') as HTMLSelectElement
+            const intervalMs = parseInt(intervalSelect.value, 10)
+            const sampleCountSelect = document.getElementById('sample-count-select') as HTMLSelectElement
+            const sampleCount = parseInt(sampleCountSelect.value, 10) as 1 | 2 | 4
             const panel = document.getElementById('lm-data-panel')
             if (panel) panel.style.display = 'block'
-            onStart(intervalMs)
+            onStart(intervalMs, sampleCount)
             toggleBtn.dataset.running = 'true'
             toggleBtn.textContent = 'Stop Streaming'
           }
@@ -492,5 +512,14 @@ export const UI = {
         })
       })
     })
+  },
+
+  initChart(): void {
+    const container = document.getElementById('lm-chart')
+    if (container) LiveChart.init(container)
+  },
+
+  destroyChart(): void {
+    LiveChart.destroy()
   },
 }

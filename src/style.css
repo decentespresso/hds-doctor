@@ -357,6 +357,11 @@
 .lm-flag-active   { background: #ff6b6b; }
 .lm-flag-inactive { background: rgba(144, 144, 144, 0.25); }
 
+.lm-chart-container {
+    margin: 1em 0;
+    min-height: 250px;
+}
+
 .lm-history-wrap {
     max-height: 260px;
     overflow-y: auto;

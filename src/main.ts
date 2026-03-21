@@ -1,5 +1,6 @@
 import { UI } from './ui'
 import { Serial } from './serial'
+import { LiveChart } from './chart'
 import {
   evaluateNoiseStability,
   evaluateConnectionHealth,
@@ -47,18 +48,29 @@ const App = {
         UI.renderQuickCheck(!!Serial.port, () => this.runQuickCheck())
         break
       case 'guided':
-        UI.renderTestPicker((selectedIds) => this.runGuided(selectedIds))
+        UI.renderTestPicker(async (selectedIds, sampleCount) => {
+          await Serial.setSampleCount(sampleCount)
+          this.runGuided(selectedIds)
+        })
         break
       case 'live-monitor':
         UI.renderLiveMonitor(
           !!Serial.port,
-          (intervalMs) => {
-            Serial.onPacket = (packet) => UI.updateLiveData(packet)
+          async (intervalMs, sampleCount) => {
+            await Serial.setSampleCount(sampleCount)
+            const panel = document.getElementById('lm-data-panel')
+            if (panel) panel.style.display = 'block'
+            UI.initChart()
+            Serial.onPacket = (packet) => {
+              UI.updateLiveData(packet)
+              LiveChart.addPoint(packet.timestamp, packet.smoothedValue, packet.dataStdDev)
+            }
             Serial.startPolling(intervalMs)
           },
           () => {
             Serial.stopPolling()
             Serial.onPacket = null
+            UI.destroyChart()
           }
         )
         break
@@ -73,6 +85,7 @@ const App = {
   // ── Quick Check ──────────────────────────────────────────────────────────
 
   async runQuickCheck(): Promise<void> {
+    await Serial.setSampleCount(4)
     const DURATION_MS = 10_000
     const POLL_INTERVAL_MS = 100
     const packets: DebugPacket[] = []
