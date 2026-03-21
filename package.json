@@ -18,5 +18,8 @@
     "vite": "^8.0.1",
     "vite-plugin-mkcert": "^1.17.10",
     "vitest": "^4.1.0"
+  },
+  "dependencies": {
+    "uplot": "^1.6.32"
   }
 }
