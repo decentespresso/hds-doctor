@@ -119,4 +119,12 @@ export const Serial = {
       this.pollTimer = null
     }
   },
+
+  async setSampleCount(count: 1 | 2 | 4): Promise<void> {
+    if (!this.writer) return
+    const modeMap: Record<number, number> = { 1: 0x00, 2: 0x01, 4: 0x03 }
+    const mode = modeMap[count]
+    const checksum = 0x03 ^ 0x1D ^ mode
+    await this.writer.write(new Uint8Array([0x03, 0x1D, mode, checksum]))
+  },
 }
