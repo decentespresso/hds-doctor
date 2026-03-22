@@ -49,9 +49,9 @@ Measures signal noise over ~10 seconds with an empty scale. Evaluates the standa
 
 | Verdict | Threshold | What it means |
 |---------|-----------|---------------|
-| Pass | Std dev < 10 | Excellent stability, scale is healthy |
-| Warning | Std dev 10–50 | Some noise detected — check cable connections and grounding |
-| Fail | Std dev > 50 | Excessive noise — likely a hardware issue (damaged load cell, interference, weak signal) |
+| Pass | Std dev < 25 | Excellent stability, scale is healthy |
+| Warning | Std dev 25–60 | Some noise detected — check cable connections and grounding |
+| Fail | Std dev > 60 | Excessive noise — likely a hardware issue (damaged load cell, interference, weak signal) |
 
 ### Load Cell Bond
 
