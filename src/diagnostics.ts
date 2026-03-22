@@ -9,10 +9,10 @@ export function evaluateNoiseStability(packets: DebugPacket[]): TestResult {
   let verdict: Verdict
   let summary: string
 
-  if (stdDev < 10) {
+  if (stdDev < 25) {
     verdict = 'pass'
     summary = `Std dev ${stdDev.toFixed(1)} — excellent stability`
-  } else if (stdDev <= 50) {
+  } else if (stdDev <= 60) {
     verdict = 'warning'
     summary = `Std dev ${stdDev.toFixed(1)} — some noise detected, check connections`
   } else {

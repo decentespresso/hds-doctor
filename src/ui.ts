@@ -437,8 +437,8 @@ export const UI = {
     if (stdDevEl) {
       stdDevEl.textContent = packet.dataStdDev.toFixed(1)
       stdDevEl.className = 'lm-metric-value ' + (
-        packet.dataStdDev < 10 ? 'lm-stddev-good'
-        : packet.dataStdDev <= 50 ? 'lm-stddev-warn'
+        packet.dataStdDev < 25 ? 'lm-stddev-good'
+        : packet.dataStdDev <= 60 ? 'lm-stddev-warn'
         : 'lm-stddev-bad'
       )
     }
