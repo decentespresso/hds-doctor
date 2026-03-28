@@ -220,6 +220,18 @@
 
 /* ── Test picker ──────────────────────────────────────────────────────────── */
 
+.test-checkbox {
+    appearance: auto;
+    opacity: 1;
+    position: static;
+    float: none;
+    margin: 0;
+    z-index: auto;
+    width: auto;
+    height: auto;
+    cursor: pointer;
+}
+
 .picker-hint {
     color: var(--color-text-body);
     font-size: 0.9em;
