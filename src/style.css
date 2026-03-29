@@ -299,6 +299,10 @@
     margin-bottom: 1em;
 }
 
+#override-btn {
+    margin-bottom: 0.75em;
+}
+
 .wizard-instruction h3 {
     font-size: 1.1em;
     font-weight: 700;
