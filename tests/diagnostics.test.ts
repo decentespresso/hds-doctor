@@ -70,6 +70,38 @@ describe('evaluateLoadCellBond', () => {
     const result = evaluateLoadCellBond(empty, loaded)
     expect(result.verdict).toBe('fail')
   })
+
+  it('sets overridable on low-delta fail', () => {
+    const empty = Array.from({ length: 5 }, () => makePacket({ smoothedValue: 1000 }))
+    const loaded = Array.from({ length: 5 }, () => makePacket({ smoothedValue: 1050 }))
+    const result = evaluateLoadCellBond(empty, loaded)
+    expect(result.verdict).toBe('fail')
+    expect(result.overridable).toBe(true)
+  })
+
+  it('does not set overridable on erratic fail', () => {
+    const empty = Array.from({ length: 5 }, () => makePacket({ smoothedValue: 1000 }))
+    const loaded = Array.from({ length: 5 }, (_, i) => makePacket({ smoothedValue: 1000 + i * 500 }))
+    const result = evaluateLoadCellBond(empty, loaded)
+    expect(result.verdict).toBe('fail')
+    expect(result.overridable).not.toBe(true)
+  })
+
+  it('does not set overridable on pass', () => {
+    const empty = Array.from({ length: 5 }, () => makePacket({ smoothedValue: 1000 }))
+    const loaded = Array.from({ length: 5 }, () => makePacket({ smoothedValue: 50000 }))
+    const result = evaluateLoadCellBond(empty, loaded)
+    expect(result.verdict).toBe('pass')
+    expect(result.overridable).not.toBe(true)
+  })
+
+  it('does not set overridable on warning', () => {
+    const empty = Array.from({ length: 5 }, () => makePacket({ smoothedValue: 1000 }))
+    const loaded = Array.from({ length: 5 }, () => makePacket({ smoothedValue: 6000 }))
+    const result = evaluateLoadCellBond(empty, loaded)
+    expect(result.verdict).toBe('warning')
+    expect(result.overridable).not.toBe(true)
+  })
 })
 
 describe('evaluateDrift', () => {

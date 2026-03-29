@@ -68,12 +68,15 @@ export function evaluateLoadCellBond(
 
   let verdict: Verdict
   let summary: string
+  let overridable: boolean | undefined
 
-  if (delta < 1000 || loadedVariance > 500) {
+  if (loadedVariance > 500) {
     verdict = 'fail'
-    summary = delta < 1000
-      ? `ADC delta only ${Math.round(delta)} — load cell may be damaged or disconnected`
-      : `Erratic readings (variance ${Math.round(loadedVariance)}) — unstable connection`
+    summary = `Erratic readings (variance ${Math.round(loadedVariance)}) — unstable connection`
+  } else if (delta < 1000) {
+    verdict = 'fail'
+    summary = `ADC delta only ${Math.round(delta)} — load cell may be damaged or disconnected`
+    overridable = true
   } else if (delta < 10000) {
     verdict = 'warning'
     summary = `ADC delta ${Math.round(delta)} — lower than expected, check load cell bond`
@@ -83,7 +86,7 @@ export function evaluateLoadCellBond(
   }
 
   const rawPackets = [...emptyPackets, ...loadedPackets]
-  return { testId: 'load-cell-bond', verdict, summary, rawPackets }
+  return { testId: 'load-cell-bond', verdict, summary, rawPackets, ...(overridable && { overridable }) }
 }
 
 export function evaluateDrift(packets: DebugPacket[]): TestResult {
