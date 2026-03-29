@@ -25,6 +25,7 @@ export interface TestResult {
   verdict: Verdict
   summary: string
   rawPackets: DebugPacket[]
+  overridable?: boolean
 }
 
 export interface Report {
