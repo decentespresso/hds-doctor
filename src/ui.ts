@@ -288,8 +288,13 @@ export const UI = {
     testName: string,
     result: TestResult,
     isLast: boolean,
-    onNext: () => void
+    onNext: () => void,
+    onOverride?: () => void
   ): void {
+    const overrideBtn = result.overridable && onOverride
+      ? `<button id="override-btn" class="button small">Accept as Pass</button>`
+      : ''
+
     this.showView('guided', `
       <div class="view-header">
         <h2>${testName}</h2>
@@ -299,10 +304,18 @@ export const UI = {
           ${this.verdictBadge(result.verdict)}
           <p class="result-summary">${result.summary}</p>
         </div>
+        ${overrideBtn}
         <button id="next-btn" class="button special">${isLast ? 'Finish' : 'Next Test'}</button>
       </div>
     `, () => {
       document.getElementById('next-btn')?.addEventListener('click', onNext)
+      if (result.overridable && onOverride) {
+        document.getElementById('override-btn')?.addEventListener('click', () => {
+          onOverride()
+          // Re-render with updated result (onOverride mutates result in place)
+          this.renderWizardResult(testName, result, isLast, onNext)
+        })
+      }
     })
   },
 

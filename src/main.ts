@@ -186,7 +186,11 @@ const App = {
 
       // result phase
       await new Promise<void>((resolve) => {
-        UI.renderWizardResult(test.name, result!, isLast, resolve)
+        UI.renderWizardResult(test.name, result!, isLast, resolve, () => {
+          result!.verdict = 'pass'
+          result!.summary = `ADC delta ${result!.summary.match(/\d+/)?.[0] ?? '?'} — accepted by user`
+          result!.overridable = false
+        })
       })
       wizard.advance() // result -> next instruction or done
     }
