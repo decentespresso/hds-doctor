@@ -106,7 +106,12 @@ export const UI = {
         <p>Your scale is running firmware <strong>${version}</strong>, which does not support debug mode.</p>
         <p>Update to firmware <strong>3.0.7</strong> or later to use HDS Doctor.</p>
       </div>
-    `)
+      <button id="back-btn" class="button small" style="display:block;margin:1.5em auto 0;">Back to Home</button>
+    `, () => {
+      document.getElementById('back-btn')?.addEventListener('click', () => {
+        this.onNavigate?.('landing')
+      })
+    })
   },
 
   renderDeviceNotDetected(): void {
@@ -116,7 +121,12 @@ export const UI = {
         <h2>Device Not Recognized</h2>
         <p>No response received from the scale. This device may not be a Decent scale, or it may be running firmware that does not support debug mode.</p>
       </div>
-    `)
+      <button id="back-btn" class="button small" style="display:block;margin:1.5em auto 0;">Back to Home</button>
+    `, () => {
+      document.getElementById('back-btn')?.addEventListener('click', () => {
+        this.onNavigate?.('landing')
+      })
+    })
   },
 
   verdictBadge(verdict: Verdict): string {
@@ -217,7 +227,7 @@ export const UI = {
           <option value="2">2</option>
           <option value="4">4</option>
         </select>
-        <span class="settings-warning">Only change this if you know what you are doing</span>
+        <span class="settings-warning">Advanced — only change if instructed to do so</span>
       </div>
       <button id="start-guided-btn" class="button special">Start</button>
     `, () => {
@@ -267,7 +277,7 @@ export const UI = {
     const countEl = document.getElementById('wizard-sample-count')
     if (bar && countEl) {
       bar.style.width = `${percent}%`
-      countEl.textContent = `${sampleCount} samples collected`
+      countEl.textContent = `${sampleCount} readings collected`
       const wrap = document.getElementById('wizard-progress-wrap')
       if (wrap) wrap.setAttribute('aria-valuenow', String(Math.round(percent)))
       return
@@ -282,7 +292,7 @@ export const UI = {
         <div class="progress-bar-wrap" role="progressbar" aria-valuenow="${Math.round(percent)}" aria-valuemin="0" aria-valuemax="100" id="wizard-progress-wrap">
           <div id="wizard-progress-bar" class="progress-bar" style="width:${percent}%"></div>
         </div>
-        <p id="wizard-sample-count" class="status-text" aria-live="polite">${sampleCount} samples collected</p>
+        <p id="wizard-sample-count" class="status-text" aria-live="polite">${sampleCount} readings collected</p>
         <button id="cancel-collection-btn" class="back-btn">Cancel</button>
       </div>
     `, () => {
@@ -389,7 +399,7 @@ export const UI = {
           <option value="2">2</option>
           <option value="4">4</option>
         </select>
-        <span class="settings-warning">Only change this if you know what you are doing</span>
+        <span class="settings-warning">Advanced — only change if instructed to do so</span>
       </div>
       <div>
         ${connected
@@ -516,7 +526,7 @@ export const UI = {
           ${report.overallVerdict.toUpperCase()}
         </div>
         <p class="report-summary">${report.overallSummary}</p>
-        <p class="report-meta">${new Date(report.timestamp).toLocaleString()} &nbsp;·&nbsp; v${report.appVersion}</p>
+        <p class="report-meta">${new Date(report.timestamp).toLocaleString()} &nbsp;·&nbsp; App v${report.appVersion}${report.deviceInfo?.firmwareVersion ? ` &nbsp;·&nbsp; FW ${report.deviceInfo.firmwareVersion}` : ''}</p>
       </div>
       <ul class="report-test-list">
         ${report.testsRun.map((r, i) => `

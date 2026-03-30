@@ -120,7 +120,7 @@ const App = {
       packets.push(packet)
       const elapsed = Date.now() - startTime
       const percent = Math.min(100, Math.round((elapsed / DURATION_MS) * 100))
-      UI.showQuickCheckProgress(percent, `Collecting… ${packets.length} samples`)
+      UI.showQuickCheckProgress(percent, `Collecting… ${packets.length} readings`)
     }
 
     Serial.startPolling(POLL_INTERVAL_MS)
@@ -134,7 +134,7 @@ const App = {
     const connResult = evaluateConnectionHealth(packets)
     const results: TestResult[] = [noiseResult, connResult]
     const overall = overallVerdict(results)
-    const summary = `Tested ${packets.length} packets in 10 seconds`
+    const summary = `Collected ${packets.length} readings in 10 seconds`
 
     UI.showQuickCheckResult(results, overall, summary, () => this.runQuickCheck())
   },
@@ -209,7 +209,7 @@ const App = {
       await new Promise<void>((resolve) => {
         UI.renderWizardResult(test.name, result!, isLast, resolve, () => {
           result!.verdict = 'pass'
-          result!.summary = `ADC delta ${result!.summary.match(/\d+/)?.[0] ?? '?'} — accepted by user`
+          result!.summary = `${result!.summary.split('—')[0].trim()} — accepted by user`
           result!.overridable = false
         }, () => {
           retest = true

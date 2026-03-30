@@ -4,7 +4,7 @@ export const TEST_DEFINITIONS: TestDefinition[] = [
   {
     id: 'noise-stability',
     name: 'Noise & Stability',
-    description: 'Measures signal noise with empty scale',
+    description: 'Checks reading stability on an empty scale',
     durationEstimate: '~10s',
     pollIntervalMs: 100,
     collectionDurationMs: 10000,
@@ -20,7 +20,7 @@ export const TEST_DEFINITIONS: TestDefinition[] = [
   {
     id: 'drift',
     name: 'Drift',
-    description: 'Monitors tare stability over time',
+    description: 'Checks if readings drift while scale is idle',
     durationEstimate: '~30s',
     pollIntervalMs: 500,
     collectionDurationMs: 30000,
@@ -28,7 +28,7 @@ export const TEST_DEFINITIONS: TestDefinition[] = [
   {
     id: 'connection-health',
     name: 'Connection Health',
-    description: 'Checks ADC communication and timing',
+    description: 'Checks data link between scale and computer',
     durationEstimate: '~10s',
     pollIntervalMs: 100,
     collectionDurationMs: 10000,
