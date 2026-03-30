@@ -28,6 +28,16 @@ export function decodeLedResponse(data: Uint8Array): LedResponse | null {
   }
 }
 
+export function compareFirmwareVersion(a: string, b: string): number {
+  const pa = a.split('.').map(Number)
+  const pb = b.split('.').map(Number)
+  for (let i = 0; i < 3; i++) {
+    const diff = (pa[i] ?? 0) - (pb[i] ?? 0)
+    if (diff !== 0) return diff
+  }
+  return 0
+}
+
 export function computeChecksum(data: Uint8Array): number {
   let checksum = 0
   for (let i = 0; i < 40; i++) {

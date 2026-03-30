@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { decodeDebugPacket, computeChecksum, decodeLedResponse } from '../src/decoder'
+import { decodeDebugPacket, computeChecksum, decodeLedResponse, compareFirmwareVersion } from '../src/decoder'
 
 function buildPacket(overrides: Partial<Record<string, number>> = {}): Uint8Array {
   const buf = new ArrayBuffer(41)
@@ -131,5 +131,27 @@ describe('decodeLedResponse', () => {
 
   it('returns null for wrong length', () => {
     expect(decodeLedResponse(new Uint8Array(5))).toBeNull()
+  })
+})
+
+describe('compareFirmwareVersion', () => {
+  it('returns 0 for equal versions', () => {
+    expect(compareFirmwareVersion('3.0.7', '3.0.7')).toBe(0)
+  })
+
+  it('returns negative when a < b', () => {
+    expect(compareFirmwareVersion('3.0.6', '3.0.7')).toBeLessThan(0)
+  })
+
+  it('returns positive when a > b', () => {
+    expect(compareFirmwareVersion('3.1.0', '3.0.7')).toBeGreaterThan(0)
+  })
+
+  it('compares major version first', () => {
+    expect(compareFirmwareVersion('2.9.9', '3.0.0')).toBeLessThan(0)
+  })
+
+  it('compares minor version second', () => {
+    expect(compareFirmwareVersion('3.1.0', '3.0.9')).toBeGreaterThan(0)
   })
 })
