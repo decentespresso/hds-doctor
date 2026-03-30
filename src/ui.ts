@@ -289,7 +289,8 @@ export const UI = {
     result: TestResult,
     isLast: boolean,
     onNext: () => void,
-    onOverride?: () => void
+    onOverride?: () => void,
+    onRetest?: () => void
   ): void {
     const overrideBtn = result.overridable && onOverride
       ? `<button id="override-btn" class="button small">Accept as Pass</button>`
@@ -305,15 +306,18 @@ export const UI = {
           <p class="result-summary">${result.summary}</p>
         </div>
         ${overrideBtn}
-        <button id="next-btn" class="button special">${isLast ? 'Finish' : 'Next Test'}</button>
+        <div class="wizard-result-actions">
+          <button id="retest-btn" class="button small">Re-test</button>
+          <button id="next-btn" class="button special">${isLast ? 'Finish' : 'Next Test'}</button>
+        </div>
       </div>
     `, () => {
       document.getElementById('next-btn')?.addEventListener('click', onNext)
+      document.getElementById('retest-btn')?.addEventListener('click', () => onRetest?.())
       if (result.overridable && onOverride) {
         document.getElementById('override-btn')?.addEventListener('click', () => {
           onOverride()
-          // Re-render with updated result (onOverride mutates result in place)
-          this.renderWizardResult(testName, result, isLast, onNext)
+          this.renderWizardResult(testName, result, isLast, onNext, undefined, onRetest)
         })
       }
     })

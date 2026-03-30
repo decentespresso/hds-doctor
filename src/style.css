@@ -220,16 +220,20 @@
 
 /* ── Test picker ──────────────────────────────────────────────────────────── */
 
-.test-checkbox {
+input[type="checkbox"].test-checkbox {
     appearance: auto;
-    opacity: 1;
-    position: static;
+    -webkit-appearance: checkbox;
+    opacity: 1 !important;
+    position: static !important;
     float: none;
     margin: 0;
     z-index: auto;
-    width: auto;
-    height: auto;
+    width: 1.1em !important;
+    height: 1.1em !important;
     cursor: pointer;
+    display: inline-block !important;
+    visibility: visible !important;
+    pointer-events: auto !important;
 }
 
 .picker-hint {
@@ -301,6 +305,11 @@
 
 #override-btn {
     margin-bottom: 0.75em;
+}
+
+.wizard-result-actions {
+    display: flex;
+    gap: 0.75em;
 }
 
 .wizard-instruction h3 {
