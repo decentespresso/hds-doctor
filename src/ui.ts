@@ -74,6 +74,7 @@ export const UI = {
           <div class="mode-card-desc">Real-time data stream</div>
         </div>
       </div>
+      <p class="power-on-hint">Make sure your scale is powered on before connecting.</p>
       <div style="text-align:center;">
         <button id="load-report-btn" class="button small">Load a saved report</button>
       </div>
