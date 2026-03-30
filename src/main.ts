@@ -8,6 +8,7 @@ import {
   evaluateDrift,
   overallVerdict,
 } from './diagnostics'
+import { compareFirmwareVersion } from './decoder'
 import { GuidedWizard } from './guided'
 import { generateReport, parseReport, downloadReport, loadReportFromFile } from './report'
 import type { DebugPacket, TestResult, TestId, Report } from './types'
@@ -30,6 +31,9 @@ const App = {
     Serial.onLedResponse = (info) => {
       Serial.deviceInfo = info
       UI.setConnected(true, info)
+      if (compareFirmwareVersion(info.firmwareVersion, '3.0.7') < 0) {
+        UI.renderFirmwareError(info.firmwareVersion)
+      }
     }
     Serial.onStatus = (connected) => UI.setConnected(connected, connected ? Serial.deviceInfo : null)
     UI.renderLanding()

@@ -98,6 +98,17 @@ export const UI = {
     })
   },
 
+  renderFirmwareError(version: string): void {
+    this.showView('landing', `
+      <h1>HDS Doctor</h1>
+      <div class="firmware-error">
+        <h2>Firmware Update Required</h2>
+        <p>Your scale is running firmware <strong>${version}</strong>, which does not support debug mode.</p>
+        <p>Update to firmware <strong>3.0.7</strong> or later to use HDS Doctor.</p>
+      </div>
+    `)
+  },
+
   verdictBadge(verdict: Verdict): string {
     return `<span class="verdict-${verdict}">${verdict.toUpperCase()}</span>`
   },
