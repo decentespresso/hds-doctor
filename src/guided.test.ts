@@ -39,6 +39,32 @@ describe('GuidedWizard', () => {
     wizard.advance(); expect(wizard.phase).toBe('collecting')
     wizard.advance(); expect(wizard.phase).toBe('result')
   })
+
+  it('restartCurrentTest resets phase to instruction from result', () => {
+    const wizard = new GuidedWizard(['noise-stability', 'drift'])
+    // advance to result phase of first test
+    wizard.advance() // instruction -> collecting
+    wizard.advance() // collecting -> result
+    expect(wizard.phase).toBe('result')
+
+    wizard.restartCurrentTest()
+    expect(wizard.phase).toBe('instruction')
+    expect(wizard.currentTestIndex).toBe(0)
+    expect(wizard.isDone).toBe(false)
+  })
+
+  it('restartCurrentTest works for load-cell-bond', () => {
+    const wizard = new GuidedWizard(['load-cell-bond'])
+    wizard.advance() // instruction -> collecting
+    wizard.advance() // collecting -> mid-action
+    wizard.advance() // mid-action -> collecting
+    wizard.advance() // collecting -> result
+    expect(wizard.phase).toBe('result')
+
+    wizard.restartCurrentTest()
+    expect(wizard.phase).toBe('instruction')
+    expect(wizard.currentTestIndex).toBe(0)
+  })
 })
 
 describe('TEST_DEFINITIONS', () => {

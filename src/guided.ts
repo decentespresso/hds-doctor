@@ -88,4 +88,9 @@ export class GuidedWizard {
         break
     }
   }
+
+  restartCurrentTest(): void {
+    this.phase = 'instruction'
+    this.collectingSubPhase = 'first'
+  }
 }
