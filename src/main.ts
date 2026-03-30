@@ -15,6 +15,8 @@ import type { DebugPacket, TestResult, TestId, Report } from './types'
 import './style.css'
 
 const App = {
+  _connectWatchdog: null as ReturnType<typeof setTimeout> | null,
+
   init(): void {
     if (!('serial' in navigator)) {
       const appEl = document.getElementById('app')
@@ -29,6 +31,10 @@ const App = {
     UI.onDisconnect = () => this.disconnect()
     UI.onNavigate = (view) => this.navigate(view)
     Serial.onLedResponse = (info) => {
+      if (this._connectWatchdog) {
+        clearTimeout(this._connectWatchdog)
+        this._connectWatchdog = null
+      }
       Serial.deviceInfo = info
       UI.setConnected(true, info)
       if (compareFirmwareVersion(info.firmwareVersion, '3.0.7') < 0) {
@@ -40,10 +46,21 @@ const App = {
   },
 
   async connect(): Promise<void> {
-    await Serial.connect()
+    const connected = await Serial.connect()
+    if (connected) {
+      this._connectWatchdog = setTimeout(() => {
+        if (!Serial.deviceInfo) {
+          UI.renderDeviceNotDetected()
+        }
+      }, 5000)
+    }
   },
 
   async disconnect(): Promise<void> {
+    if (this._connectWatchdog) {
+      clearTimeout(this._connectWatchdog)
+      this._connectWatchdog = null
+    }
     await Serial.disconnect()
   },
 

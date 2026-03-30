@@ -109,6 +109,16 @@ export const UI = {
     `)
   },
 
+  renderDeviceNotDetected(): void {
+    this.showView('landing', `
+      <h1>HDS Doctor</h1>
+      <div class="device-not-detected">
+        <h2>Device Not Recognized</h2>
+        <p>No response received from the scale. This device may not be a Decent scale, or it may be running firmware that does not support debug mode.</p>
+      </div>
+    `)
+  },
+
   verdictBadge(verdict: Verdict): string {
     return `<span class="verdict-${verdict}">${verdict.toUpperCase()}</span>`
   },
