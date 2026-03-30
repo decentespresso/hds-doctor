@@ -11,16 +11,17 @@ export function evaluateNoiseStability(packets: DebugPacket[]): TestResult {
 
   if (stdDev < 25) {
     verdict = 'pass'
-    summary = `Std dev ${stdDev.toFixed(1)} — excellent stability`
+    summary = `Noise level ${stdDev.toFixed(1)} — excellent stability`
   } else if (stdDev <= 60) {
     verdict = 'warning'
-    summary = `Std dev ${stdDev.toFixed(1)} — some noise detected, check connections`
+    summary = `Noise level ${stdDev.toFixed(1)} — some noise detected, check connections`
   } else {
     verdict = 'fail'
-    summary = `Std dev ${stdDev.toFixed(1)} — excessive noise, likely hardware issue`
+    summary = `Noise level ${stdDev.toFixed(1)} — excessive noise, likely hardware issue`
   }
 
-  return { testId: 'noise-stability', verdict, summary, rawPackets: packets }
+  const overridable = verdict === 'fail' ? true : undefined
+  return { testId: 'noise-stability', verdict, summary, rawPackets: packets, ...(overridable && { overridable }) }
 }
 
 function computeStdDev(values: number[]): number {
@@ -42,17 +43,18 @@ export function evaluateConnectionHealth(packets: DebugPacket[]): TestResult {
   if (avgSps === 0 || flagRatio > 0.5) {
     verdict = 'fail'
     summary = avgSps === 0
-      ? 'SPS is zero — ADC not responding'
-      : `${Math.round(flagRatio * 100)}% of samples had errors`
+      ? 'No data received — sensor not responding'
+      : `${Math.round(flagRatio * 100)}% of readings had errors`
   } else if (flagRatio > 0) {
     verdict = 'warning'
-    summary = `${timeoutCount} timeouts, ${oorCount} out-of-range in ${packets.length} samples`
+    summary = `${timeoutCount} timeouts, ${oorCount} out-of-range in ${packets.length} readings`
   } else {
     verdict = 'pass'
-    summary = `No errors, SPS stable at ${avgSps.toFixed(1)}`
+    summary = `No errors, sampling rate stable at ${avgSps.toFixed(1)}/s`
   }
 
-  return { testId: 'connection-health', verdict, summary, rawPackets: packets }
+  const overridable = verdict === 'fail' ? true : undefined
+  return { testId: 'connection-health', verdict, summary, rawPackets: packets, ...(overridable && { overridable }) }
 }
 
 export function evaluateLoadCellBond(
@@ -72,17 +74,18 @@ export function evaluateLoadCellBond(
 
   if (loadedVariance > 500) {
     verdict = 'fail'
-    summary = `Erratic readings (variance ${Math.round(loadedVariance)}) — unstable connection`
+    summary = `Erratic readings — unstable connection`
+    overridable = true
   } else if (delta < 1000) {
     verdict = 'fail'
-    summary = `ADC delta only ${Math.round(delta)} — load cell may be damaged or disconnected`
+    summary = `Weight response only ${Math.round(delta)} counts — load cell may be damaged or disconnected`
     overridable = true
   } else if (delta < 10000) {
     verdict = 'warning'
-    summary = `ADC delta ${Math.round(delta)} — lower than expected, check load cell bond`
+    summary = `Weight response ${Math.round(delta)} counts — lower than expected, check load cell bond`
   } else {
     verdict = 'pass'
-    summary = `ADC delta ${Math.round(delta)} — load cell responding normally`
+    summary = `Weight response ${Math.round(delta)} counts — load cell responding normally`
   }
 
   const rawPackets = [...emptyPackets, ...loadedPackets]
@@ -90,9 +93,9 @@ export function evaluateLoadCellBond(
 }
 
 export function evaluateDrift(packets: DebugPacket[]): TestResult {
-  const offsets = packets.map(p => p.tareOffset)
-  const min = Math.min(...offsets)
-  const max = Math.max(...offsets)
+  const values = packets.map(p => p.smoothedValue)
+  const min = Math.min(...values)
+  const max = Math.max(...values)
   const range = max - min
 
   let verdict: Verdict
@@ -100,16 +103,17 @@ export function evaluateDrift(packets: DebugPacket[]): TestResult {
 
   if (range < 5) {
     verdict = 'pass'
-    summary = `Tare offset stable (range ${range})`
+    summary = `Readings stable (drift range ${range})`
   } else if (range < 50) {
     verdict = 'warning'
-    summary = `Some tare drift detected (range ${range})`
+    summary = `Some drift detected (range ${range})`
   } else {
     verdict = 'fail'
-    summary = `Significant tare drift (range ${range})`
+    summary = `Significant drift (range ${range})`
   }
 
-  return { testId: 'drift', verdict, summary, rawPackets: packets }
+  const overridable = verdict === 'fail' ? true : undefined
+  return { testId: 'drift', verdict, summary, rawPackets: packets, ...(overridable && { overridable }) }
 }
 
 export function overallVerdict(results: TestResult[]): Verdict {

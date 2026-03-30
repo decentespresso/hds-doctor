@@ -79,12 +79,12 @@ describe('evaluateLoadCellBond', () => {
     expect(result.overridable).toBe(true)
   })
 
-  it('does not set overridable on erratic fail', () => {
+  it('sets overridable on erratic fail', () => {
     const empty = Array.from({ length: 5 }, () => makePacket({ smoothedValue: 1000 }))
     const loaded = Array.from({ length: 5 }, (_, i) => makePacket({ smoothedValue: 1000 + i * 500 }))
     const result = evaluateLoadCellBond(empty, loaded)
     expect(result.verdict).toBe('fail')
-    expect(result.overridable).not.toBe(true)
+    expect(result.overridable).toBe(true)
   })
 
   it('does not set overridable on pass', () => {
@@ -105,15 +105,15 @@ describe('evaluateLoadCellBond', () => {
 })
 
 describe('evaluateDrift', () => {
-  it('passes with stable tare offset', () => {
-    const packets = Array.from({ length: 30 }, () => makePacket({ tareOffset: 100 }))
+  it('passes with stable smoothed values', () => {
+    const packets = Array.from({ length: 30 }, () => makePacket({ smoothedValue: 49800 }))
     const result = evaluateDrift(packets)
     expect(result.verdict).toBe('pass')
   })
 
-  it('fails with large tare variance', () => {
+  it('fails with large smoothed value drift', () => {
     const packets = Array.from({ length: 30 }, (_, i) =>
-      makePacket({ tareOffset: 100 + (i * 50) })
+      makePacket({ smoothedValue: 49800 + (i * 50) })
     )
     const result = evaluateDrift(packets)
     expect(result.verdict).toBe('fail')
