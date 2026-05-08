@@ -20,12 +20,21 @@ export interface DebugPacket {
 
 export type Verdict = 'pass' | 'warning' | 'fail'
 
+export type RawPattern = 'saturated-high' | 'saturated-low' | 'midscale-frozen' | 'wandering' | 'responsive'
+
+export interface RawPatternDiagnostic {
+  pattern: RawPattern
+  rawValueHex: string
+  description: string
+}
+
 export interface TestResult {
   testId: string
   verdict: Verdict
   summary: string
   rawPackets: DebugPacket[]
   overridable?: boolean
+  rawPatternDiagnostic?: RawPatternDiagnostic
 }
 
 export interface Report {

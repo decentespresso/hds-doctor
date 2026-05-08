@@ -628,6 +628,49 @@ input[type="checkbox"].test-checkbox {
     padding-bottom: 2em;
 }
 
+/* ── Raw ADC pattern diagnostic ───────────────────────────────────────────── */
+
+.raw-pattern-tip {
+    margin: 0.5em 0;
+    padding: 0.5em 0.75em;
+    background: var(--color-panel-bg);
+    border-left: 3px solid var(--color-accent);
+    border-radius: 0 4px 4px 0;
+    font-size: 0.9em;
+    color: var(--color-text-body);
+}
+
+.raw-pattern-label {
+    font-weight: 600;
+    color: var(--color-text);
+    margin-right: 0.5em;
+}
+
+.raw-pattern-hex {
+    font-family: monospace;
+    background: var(--color-panel-bg-strong);
+    padding: 0.15em 0.4em;
+    border-radius: 3px;
+    font-size: 0.95em;
+    color: var(--color-accent);
+}
+
+.raw-pattern-hex-inline {
+    font-family: monospace;
+    background: var(--color-panel-bg-strong);
+    padding: 0.1em 0.35em;
+    border-radius: 3px;
+    font-size: 0.85em;
+    color: var(--color-accent);
+    margin-left: 0.5em;
+}
+
+.raw-pattern-desc {
+    display: block;
+    margin-top: 0.35em;
+    line-height: 1.5;
+}
+
 /* ── Responsive ───────────────────────────────────────────────────────────── */
 
 /* Tablet */

@@ -1,4 +1,5 @@
 import type { DebugPacket, TestResult, Verdict } from './types'
+import { classifyRawPattern } from './classifier'
 
 export function evaluateNoiseStability(packets: DebugPacket[]): TestResult {
   // If firmware-reported std dev is all zero (1-sample mode), compute
@@ -6,12 +7,21 @@ export function evaluateNoiseStability(packets: DebugPacket[]): TestResult {
   const fwStdDev = packets.reduce((sum, p) => sum + p.dataStdDev, 0) / packets.length
   const stdDev = fwStdDev > 0 ? fwStdDev : computeStdDev(packets.map(p => p.rawValue))
 
+  // Classify raw ADC pattern for differential diagnosis
+  const rawDiagnostic = classifyRawPattern(packets)
+
   let verdict: Verdict
   let summary: string
 
   if (stdDev < 25) {
     verdict = 'pass'
-    summary = `Noise level ${stdDev.toFixed(1)} — excellent stability`
+    // If pattern is saturated (pinned to rail), override — indicates open/short hardware fault
+    if (rawDiagnostic.pattern === 'saturated-high' || rawDiagnostic.pattern === 'saturated-low') {
+      verdict = 'warning'
+      summary = `Low noise (${stdDev.toFixed(1)}) but ADC appears stuck at ${rawDiagnostic.rawValueHex} — may indicate disconnected load cell, cold joint, or dead VREF`
+    } else {
+      summary = `Noise level ${stdDev.toFixed(1)} — excellent stability`
+    }
   } else if (stdDev <= 60) {
     verdict = 'warning'
     summary = `Noise level ${stdDev.toFixed(1)} — some noise detected, check connections`
@@ -21,7 +31,7 @@ export function evaluateNoiseStability(packets: DebugPacket[]): TestResult {
   }
 
   const overridable = verdict === 'fail' ? true : undefined
-  return { testId: 'noise-stability', verdict, summary, rawPackets: packets, ...(overridable && { overridable }) }
+  return { testId: 'noise-stability', verdict, summary, rawPackets: packets, ...(overridable && { overridable }), rawPatternDiagnostic: rawDiagnostic }
 }
 
 function computeStdDev(values: number[]): number {
@@ -68,6 +78,10 @@ export function evaluateLoadCellBond(
   const loadedValues = loadedPackets.map(p => p.smoothedValue)
   const loadedVariance = loadedValues.reduce((s, v) => s + (v - loadedAvg) ** 2, 0) / loadedValues.length
 
+  // Classify raw ADC pattern for differential diagnosis
+  const rawPackets = [...emptyPackets, ...loadedPackets]
+  const rawDiagnostic = classifyRawPattern(rawPackets)
+
   let verdict: Verdict
   let summary: string
   let overridable: boolean | undefined
@@ -88,8 +102,7 @@ export function evaluateLoadCellBond(
     summary = `Weight response ${Math.round(delta)} counts — load cell responding normally`
   }
 
-  const rawPackets = [...emptyPackets, ...loadedPackets]
-  return { testId: 'load-cell-bond', verdict, summary, rawPackets, ...(overridable && { overridable }) }
+  return { testId: 'load-cell-bond', verdict, summary, rawPackets, ...(overridable && { overridable }), rawPatternDiagnostic: rawDiagnostic }
 }
 
 export function evaluateDrift(packets: DebugPacket[]): TestResult {

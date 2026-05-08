@@ -192,6 +192,13 @@ export const UI = {
             ${this.verdictBadge(r.verdict)}
             <span class="result-test-id">${r.testId}</span>
             <span class="result-test-summary">${r.summary}</span>
+            ${r.rawPatternDiagnostic ? `
+              <div class="raw-pattern-tip">
+                <span class="raw-pattern-label">Raw ADC:</span>
+                <code class="raw-pattern-hex">${r.rawPatternDiagnostic.rawValueHex}</code>
+                <span class="raw-pattern-desc">${r.rawPatternDiagnostic.description}</span>
+              </div>
+            ` : ''}
           </li>
         `).join('')}
       </ul>
@@ -328,6 +335,14 @@ export const UI = {
       ? `<button id="override-btn" class="button small">Accept as Pass</button>`
       : ''
 
+    const rawDiagnostic = result.rawPatternDiagnostic
+      ? `<div class="raw-pattern-tip">
+           <span class="raw-pattern-label">Raw ADC:</span>
+           <code class="raw-pattern-hex">${result.rawPatternDiagnostic.rawValueHex}</code>
+           <span class="raw-pattern-desc">${result.rawPatternDiagnostic.description}</span>
+         </div>`
+      : ''
+
     this.showView('guided', `
       <div class="view-header">
         <h2>${testName}</h2>
@@ -337,6 +352,7 @@ export const UI = {
           ${this.verdictBadge(result.verdict)}
           <p class="result-summary">${result.summary}</p>
         </div>
+        ${rawDiagnostic}
         ${overrideBtn}
         <div class="wizard-result-actions">
           <button id="retest-btn" class="button small">Re-test</button>
@@ -535,9 +551,18 @@ export const UI = {
               ${this.verdictBadge(r.verdict)}
               <span class="report-test-id">${r.testId}</span>
               <span class="report-test-summary">${r.summary}</span>
+              ${r.rawPatternDiagnostic ? `
+                <span class="raw-pattern-hex-inline">${r.rawPatternDiagnostic.rawValueHex}</span>
+              ` : ''}
               <span class="report-test-expand">&#9660;</span>
             </div>
             <div class="report-test-packets hidden" id="report-packets-${i}">
+              ${r.rawPatternDiagnostic && r.rawPatternDiagnostic.pattern !== 'responsive' ? `
+                <div class="raw-pattern-tip">
+                  <span class="raw-pattern-label">Pattern: <strong>${r.rawPatternDiagnostic.pattern}</strong></span>
+                  <p class="raw-pattern-desc">${r.rawPatternDiagnostic.description}</p>
+                </div>
+              ` : ''}
               <table class="report-packets-table">
                 <thead>
                   <tr><th>Time (ms)</th><th>Raw</th><th>Smoothed</th><th>StdDev</th><th>SPS</th><th>Flags</th></tr>

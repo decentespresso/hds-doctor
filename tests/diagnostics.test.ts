@@ -16,7 +16,7 @@ function makePacket(overrides: Partial<DebugPacket> = {}): DebugPacket {
 
 describe('evaluateNoiseStability', () => {
   it('passes with low std dev', () => {
-    const packets = Array.from({ length: 10 }, () => makePacket({ dataStdDev: 5 }))
+    const packets = Array.from({ length: 10 }, (_, i) => makePacket({ dataStdDev: 5, rawValue: 50000 + i }))
     const result = evaluateNoiseStability(packets)
     expect(result.verdict).toBe('pass')
   })
