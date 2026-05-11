@@ -47,6 +47,11 @@ export const UI = {
     })
     this._initSplitDropdown()
     this._updateConnectButton(false)
+
+    // No usable transport — hide the connect bar entirely; user can still load reports.
+    if (!this.capabilities.hasSerial && !this.capabilities.hasBluetooth) {
+      document.getElementById('connection-bar')?.classList.add('hidden')
+    }
   },
 
   _fireConnect(): void {
@@ -195,6 +200,25 @@ export const UI = {
           }
         })
       })
+      document.getElementById('load-report-btn')?.addEventListener('click', () => {
+        this.onNavigate?.('report')
+      })
+    })
+  },
+
+  renderUnsupported(): void {
+    this.showView('landing', `
+      <h1>HDS Doctor</h1>
+      <div class="firmware-error">
+        <h2>Browser Not Supported</h2>
+        <p>Live diagnostics require Web Serial or Web Bluetooth. Safari and Firefox do not support these APIs.</p>
+        <p>To connect a scale, use <strong>Chrome</strong>, <strong>Edge</strong>, or <strong>Opera</strong> on desktop, or <strong>Chrome on Android</strong>.</p>
+        <p>You can still load and inspect a previously saved diagnostic report below.</p>
+      </div>
+      <div style="text-align:center; margin-top:1.5em;">
+        <button id="load-report-btn" class="button special small">Load a saved report</button>
+      </div>
+    `, () => {
       document.getElementById('load-report-btn')?.addEventListener('click', () => {
         this.onNavigate?.('report')
       })

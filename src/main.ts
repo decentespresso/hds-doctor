@@ -20,24 +20,23 @@ const App = {
   _connectWatchdog: null as ReturnType<typeof setTimeout> | null,
   transport: Serial as Transport,
   transportKind: 'usb' as TransportKind,
+  _supported: false,
 
   init(): void {
     const hasSerial = 'serial' in navigator
     const hasBluetooth = 'bluetooth' in navigator
-
-    if (!hasSerial && !hasBluetooth) {
-      const appEl = document.getElementById('app')
-      if (appEl) {
-        appEl.textContent = 'Neither Web Serial nor Web Bluetooth is supported. Use Chrome, Edge, or Opera.'
-      }
-      return
-    }
+    this._supported = hasSerial || hasBluetooth
 
     UI.init({ hasSerial, hasBluetooth })
     UI.onConnect = () => this.connectUsb()
     UI.onConnectBle = () => this.connectBle()
     UI.onDisconnect = () => this.disconnect()
     UI.onNavigate = (view) => this.navigate(view)
+
+    if (!this._supported) {
+      UI.renderUnsupported()
+      return
+    }
 
     this._wireTransport(Serial as Transport, 'usb')
     if (hasBluetooth) this._wireTransport(BLE as Transport, 'ble')
@@ -95,6 +94,16 @@ const App = {
   },
 
   navigate(view: string): void {
+    if (!this._supported) {
+      if (view === 'report') {
+        loadReportFromFile().then(report => {
+          if (report) this.showReport(report)
+        })
+      } else {
+        UI.renderUnsupported()
+      }
+      return
+    }
     switch (view) {
       case 'landing':
         UI.renderLanding()
