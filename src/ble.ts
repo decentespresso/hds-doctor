@@ -7,6 +7,9 @@ const WRITE_UUID = '000036f5-0000-1000-8000-00805f9b34fb'
 const NOTIFY_UUID = '0000fff4-0000-1000-8000-00805f9b34fb'
 
 const DEBUG_REQUEST: Uint8Array = new Uint8Array([0x03, 0x25, 0x02, 0x24])
+// Firmware enum: 0=OFF, 1=CONTINUOUS, 2=SINGLE. Checksum = XOR of preceding bytes.
+const DEBUG_STREAM_ON: Uint8Array = new Uint8Array([0x03, 0x25, 0x01, 0x27])
+const DEBUG_STREAM_OFF: Uint8Array = new Uint8Array([0x03, 0x25, 0x00, 0x26])
 const LED_ON_REQUEST: Uint8Array = new Uint8Array([0x03, 0x0A, 0x01, 0x00, 0x00, 0x01, 0x09])
 
 // Decent Scale firmware drops the connection after 5s without a heartbeat.
@@ -22,7 +25,7 @@ export const BLE = {
   server: null as BluetoothRemoteGATTServer | null,
   writeChar: null as BluetoothRemoteGATTCharacteristic | null,
   notifyChar: null as BluetoothRemoteGATTCharacteristic | null,
-  pollTimer: null as ReturnType<typeof setInterval> | null,
+  streaming: false,
   heartbeatTimer: null as ReturnType<typeof setInterval> | null,
   onPacket: null as PacketCallback | null,
   onStatus: null as StatusCallback | null,
@@ -142,17 +145,21 @@ export const BLE = {
     await this._write(LED_ON_REQUEST)
   },
 
-  startPolling(intervalMs: number): void {
-    this.stopPolling()
-    this.requestDebug()
-    this.pollTimer = setInterval(() => this.requestDebug(), intervalMs)
+  // BLE uses firmware-driven CONTINUOUS streaming instead of per-tick SINGLE
+  // requests. Sending writeValueWithResponse every intervalMs saturates the
+  // write channel and starves the 2s heartbeat — firmware then trips its 5s
+  // HEARTBEAT_TIMEOUT and disconnects. Firmware caps notify rate at ~10 Hz
+  // via BLE_DEBUG_MIN_INTERVAL, so intervalMs is currently advisory only.
+  startPolling(_intervalMs: number): void {
+    if (this.streaming) return
+    this.streaming = true
+    this._write(DEBUG_STREAM_ON).catch(() => {})
   },
 
   stopPolling(): void {
-    if (this.pollTimer !== null) {
-      clearInterval(this.pollTimer)
-      this.pollTimer = null
-    }
+    if (!this.streaming) return
+    this.streaming = false
+    this._write(DEBUG_STREAM_OFF).catch(() => {})
   },
 
   _startHeartbeat(): void {
