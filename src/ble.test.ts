@@ -35,7 +35,15 @@ function resetBle(): void {
   BLE.onPacket = null
   BLE.onStatus = null
   BLE.onLedResponse = null
-  BLE.stopPolling()
+  BLE.streaming = false
+}
+
+function attachWriteCapture(writes: Uint8Array[]): void {
+  BLE.writeChar = {
+    writeValueWithResponse: vi.fn(async (bytes: BufferSource) => {
+      writes.push(new Uint8Array(bytes as ArrayBuffer))
+    }),
+  } as unknown as BluetoothRemoteGATTCharacteristic
 }
 
 describe('BLE.requestDebug / requestDeviceInfo / setSampleCount byte arrays', () => {
@@ -177,6 +185,49 @@ describe('BLE notification demux', () => {
     BLE._handleNotification(toDataView(bad))
     expect(pktSpy).not.toHaveBeenCalled()
     expect(ledSpy).not.toHaveBeenCalled()
+  })
+})
+
+describe('BLE.startPolling / stopPolling use firmware CONTINUOUS stream', () => {
+  beforeEach(() => resetBle())
+
+  it('startPolling sends CONTINUOUS once (03 25 01 27), no per-tick writes', async () => {
+    const writes: Uint8Array[] = []
+    attachWriteCapture(writes)
+    BLE.startPolling(100)
+    // Drain microtasks so the fire-and-forget write resolves.
+    await Promise.resolve(); await Promise.resolve()
+    expect(writes).toHaveLength(1)
+    expect(Array.from(writes[0])).toEqual([0x03, 0x25, 0x01, 0x27])
+    expect(BLE.streaming).toBe(true)
+  })
+
+  it('startPolling is idempotent — second call sends nothing', async () => {
+    const writes: Uint8Array[] = []
+    attachWriteCapture(writes)
+    BLE.startPolling(100)
+    BLE.startPolling(100)
+    await Promise.resolve(); await Promise.resolve()
+    expect(writes).toHaveLength(1)
+  })
+
+  it('stopPolling sends OFF (03 25 00 26)', async () => {
+    const writes: Uint8Array[] = []
+    attachWriteCapture(writes)
+    BLE.startPolling(100)
+    BLE.stopPolling()
+    await Promise.resolve(); await Promise.resolve()
+    expect(writes).toHaveLength(2)
+    expect(Array.from(writes[1])).toEqual([0x03, 0x25, 0x00, 0x26])
+    expect(BLE.streaming).toBe(false)
+  })
+
+  it('stopPolling is no-op when not streaming', async () => {
+    const writes: Uint8Array[] = []
+    attachWriteCapture(writes)
+    BLE.stopPolling()
+    await Promise.resolve(); await Promise.resolve()
+    expect(writes).toHaveLength(0)
   })
 })
 
