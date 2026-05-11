@@ -1,5 +1,6 @@
 import { UI } from './ui'
 import { Serial } from './serial'
+import { BLE } from './ble'
 import { LiveChart } from './chart'
 import {
   evaluateNoiseStability,
@@ -11,45 +12,74 @@ import {
 import { compareFirmwareVersion } from './decoder'
 import { GuidedWizard } from './guided'
 import { generateReport, parseReport, downloadReport, loadReportFromFile } from './report'
+import type { Transport, TransportKind } from './transport'
 import type { DebugPacket, TestResult, TestId, Report } from './types'
 import './style.css'
 
 const App = {
   _connectWatchdog: null as ReturnType<typeof setTimeout> | null,
+  transport: Serial as Transport,
+  transportKind: 'usb' as TransportKind,
 
   init(): void {
-    if (!('serial' in navigator)) {
+    const hasSerial = 'serial' in navigator
+    const hasBluetooth = 'bluetooth' in navigator
+
+    if (!hasSerial && !hasBluetooth) {
       const appEl = document.getElementById('app')
       if (appEl) {
-        appEl.textContent = 'Web Serial API not supported. Use Chrome, Edge, or Opera.'
+        appEl.textContent = 'Neither Web Serial nor Web Bluetooth is supported. Use Chrome, Edge, or Opera.'
       }
       return
     }
 
-    UI.init()
-    UI.onConnect = () => this.connect()
+    UI.init({ hasSerial, hasBluetooth })
+    UI.onConnect = () => this.connectUsb()
+    UI.onConnectBle = () => this.connectBle()
     UI.onDisconnect = () => this.disconnect()
     UI.onNavigate = (view) => this.navigate(view)
-    Serial.onLedResponse = (info) => {
+
+    this._wireTransport(Serial as Transport, 'usb')
+    if (hasBluetooth) this._wireTransport(BLE as Transport, 'ble')
+
+    UI.renderLanding()
+  },
+
+  _wireTransport(t: Transport, kind: TransportKind): void {
+    t.onLedResponse = (info) => {
       if (this._connectWatchdog) {
         clearTimeout(this._connectWatchdog)
         this._connectWatchdog = null
       }
-      Serial.deviceInfo = info
-      UI.setConnected(true, info)
+      t.deviceInfo = info
+      UI.setConnected(true, info, kind)
       if (compareFirmwareVersion(info.firmwareVersion, '3.0.7') < 0) {
         UI.renderFirmwareError(info.firmwareVersion)
       }
     }
-    Serial.onStatus = (connected) => UI.setConnected(connected, connected ? Serial.deviceInfo : null)
-    UI.renderLanding()
+    t.onStatus = (connected) => UI.setConnected(connected, connected ? t.deviceInfo : null, kind)
   },
 
-  async connect(): Promise<void> {
-    const connected = await Serial.connect()
+  async connectUsb(): Promise<void> {
+    this.transport = Serial as Transport
+    this.transportKind = 'usb'
+    const connected = await this.transport.connect()
     if (connected) {
       this._connectWatchdog = setTimeout(() => {
-        if (!Serial.deviceInfo) {
+        if (!this.transport.deviceInfo) {
+          UI.renderDeviceNotDetected()
+        }
+      }, 5000)
+    }
+  },
+
+  async connectBle(): Promise<void> {
+    this.transport = BLE as Transport
+    this.transportKind = 'ble'
+    const connected = await this.transport.connect()
+    if (connected) {
+      this._connectWatchdog = setTimeout(() => {
+        if (!this.transport.deviceInfo) {
           UI.renderDeviceNotDetected()
         }
       }, 5000)
@@ -61,7 +91,7 @@ const App = {
       clearTimeout(this._connectWatchdog)
       this._connectWatchdog = null
     }
-    await Serial.disconnect()
+    await this.transport.disconnect()
   },
 
   navigate(view: string): void {
@@ -70,30 +100,30 @@ const App = {
         UI.renderLanding()
         break
       case 'quick-check':
-        UI.renderQuickCheck(!!Serial.port, () => this.runQuickCheck())
+        UI.renderQuickCheck(this.transport.isConnected(), () => this.runQuickCheck())
         break
       case 'guided':
         UI.renderTestPicker(async (selectedIds, sampleCount) => {
-          await Serial.setSampleCount(sampleCount)
+          await this.transport.setSampleCount(sampleCount)
           this.runGuided(selectedIds)
         })
         break
       case 'live-monitor':
         UI.renderLiveMonitor(
-          !!Serial.port,
+          this.transport.isConnected(),
           async (intervalMs, sampleCount) => {
-            await Serial.setSampleCount(sampleCount)
+            await this.transport.setSampleCount(sampleCount)
             document.getElementById('lm-data-panel')?.classList.remove('hidden')
             UI.initChart()
-            Serial.onPacket = (packet) => {
+            this.transport.onPacket = (packet) => {
               UI.updateLiveData(packet)
               LiveChart.addPoint(packet.timestamp, packet.smoothedValue, packet.dataStdDev)
             }
-            Serial.startPolling(intervalMs)
+            this.transport.startPolling(intervalMs)
           },
           () => {
-            Serial.stopPolling()
-            Serial.onPacket = null
+            this.transport.stopPolling()
+            this.transport.onPacket = null
             UI.destroyChart()
           }
         )
@@ -109,26 +139,26 @@ const App = {
   // ── Quick Check ──────────────────────────────────────────────────────────
 
   async runQuickCheck(): Promise<void> {
-    await Serial.setSampleCount(1)
+    await this.transport.setSampleCount(1)
     const DURATION_MS = 10_000
     const POLL_INTERVAL_MS = 100
     const packets: DebugPacket[] = []
     const startTime = Date.now()
 
-    const prevOnPacket = Serial.onPacket
-    Serial.onPacket = (packet) => {
+    const prevOnPacket = this.transport.onPacket
+    this.transport.onPacket = (packet) => {
       packets.push(packet)
       const elapsed = Date.now() - startTime
       const percent = Math.min(100, Math.round((elapsed / DURATION_MS) * 100))
       UI.showQuickCheckProgress(percent, `Collecting… ${packets.length} readings`)
     }
 
-    Serial.startPolling(POLL_INTERVAL_MS)
+    this.transport.startPolling(POLL_INTERVAL_MS)
 
     await new Promise<void>((resolve) => setTimeout(resolve, DURATION_MS))
 
-    Serial.stopPolling()
-    Serial.onPacket = prevOnPacket
+    this.transport.stopPolling()
+    this.transport.onPacket = prevOnPacket
 
     const noiseResult = evaluateNoiseStability(packets)
     const connResult = evaluateConnectionHealth(packets)
@@ -231,9 +261,9 @@ const App = {
     const summaryText = overall === 'pass' ? 'Scale hardware appears healthy'
       : overall === 'warning' ? 'Some issues detected'
       : 'Problems detected'
-    const reportJson = generateReport(allResults, overall, summaryText, Serial.deviceInfo ? {
-      firmwareVersion: Serial.deviceInfo.firmwareVersion,
-      battery: Serial.deviceInfo.battery,
+    const reportJson = generateReport(allResults, overall, summaryText, this.transport.deviceInfo ? {
+      firmwareVersion: this.transport.deviceInfo.firmwareVersion,
+      battery: this.transport.deviceInfo.battery,
     } : undefined)
     const report = parseReport(reportJson)!
     this.showReport(report)
@@ -260,16 +290,16 @@ const App = {
     this._cancelled = false
     const packets: DebugPacket[] = []
     const startTime = Date.now()
-    const prevOnPacket = Serial.onPacket
+    const prevOnPacket = this.transport.onPacket
 
-    Serial.onPacket = (packet) => {
+    this.transport.onPacket = (packet) => {
       packets.push(packet)
       const elapsed = Date.now() - startTime
       const percent = Math.min(100, Math.round((elapsed / durationMs) * 100))
       UI.renderWizardCollecting(testName, percent, packets.length)
     }
 
-    Serial.startPolling(pollIntervalMs)
+    this.transport.startPolling(pollIntervalMs)
 
     await new Promise<void>((resolve) => {
       UI.onCancelCollection = () => {
@@ -279,8 +309,8 @@ const App = {
       setTimeout(resolve, durationMs)
     })
 
-    Serial.stopPolling()
-    Serial.onPacket = prevOnPacket
+    this.transport.stopPolling()
+    this.transport.onPacket = prevOnPacket
     UI.onCancelCollection = null
 
     if (this._cancelled) return null

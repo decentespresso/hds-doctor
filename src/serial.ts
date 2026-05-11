@@ -22,6 +22,10 @@ export const Serial = {
   deviceInfo: null as LedResponse | null,
   reading: false,
 
+  isConnected(): boolean {
+    return this.port !== null
+  },
+
   async connect(): Promise<boolean> {
     try {
       this.port = await navigator.serial.requestPort()

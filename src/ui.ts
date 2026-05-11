@@ -12,15 +12,18 @@ export const UI = {
     btn: null as HTMLButtonElement | null,
   },
   currentView: null as ViewName | null,
+  capabilities: { hasSerial: false, hasBluetooth: false },
   onNavigate: null as ((view: ViewName) => void) | null,
   onConnect: null as (() => void) | null,
+  onConnectBle: null as (() => void) | null,
   onDisconnect: null as (() => void) | null,
 
-  init(): void {
+  init(caps?: { hasSerial: boolean; hasBluetooth: boolean }): void {
     this.appEl = document.getElementById('app')
     this.connectionBar.dot = document.getElementById('status-indicator')
     this.connectionBar.text = document.getElementById('status-text')
     this.connectionBar.btn = document.getElementById('connect-btn') as HTMLButtonElement
+    if (caps) this.capabilities = caps
     this.connectionBar.btn.addEventListener('click', () => {
       if (this.connectionBar.dot?.classList.contains('connected')) {
         this.onDisconnect?.()
@@ -28,23 +31,42 @@ export const UI = {
         this.onConnect?.()
       }
     })
+    // Top-bar Connect button is USB-only; hide entirely if Web Serial unavailable.
+    if (!this.capabilities.hasSerial && this.connectionBar.btn) {
+      this.connectionBar.btn.style.display = 'none'
+    }
   },
 
-  setConnected(connected: boolean, deviceInfo?: { firmwareVersion: string; battery: number } | null): void {
+  setConnected(
+    connected: boolean,
+    deviceInfo?: { firmwareVersion: string; battery: number } | null,
+    transportKind?: 'usb' | 'ble',
+  ): void {
     const { dot, text, btn } = this.connectionBar
     if (dot) {
       dot.classList.toggle('connected', connected)
       dot.classList.toggle('disconnected', !connected)
       dot.setAttribute('aria-label', connected ? 'Connected' : 'Disconnected')
     }
+    const transportLabel = transportKind === 'ble' ? ' (BLE)' : transportKind === 'usb' ? ' (USB)' : ''
     if (text) {
       if (connected && deviceInfo) {
-        text.textContent = `Connected — FW ${deviceInfo.firmwareVersion}`
+        text.textContent = `Connected — FW ${deviceInfo.firmwareVersion}${transportLabel}`
       } else {
-        text.textContent = connected ? 'Connected' : 'No device connected'
+        text.textContent = connected ? `Connected${transportLabel}` : 'No device connected'
       }
     }
-    if (btn) btn.textContent = connected ? 'Disconnect' : 'Connect'
+    if (btn) {
+      // When connected via any transport, the top button always disconnects.
+      // When not connected, only show it for USB (BLE has its own landing card).
+      if (connected) {
+        btn.textContent = 'Disconnect'
+        btn.style.display = ''
+      } else {
+        btn.textContent = 'Connect'
+        btn.style.display = this.capabilities.hasSerial ? '' : 'none'
+      }
+    }
   },
 
   showView(name: ViewName, html: string, init?: () => void): void {
@@ -55,6 +77,13 @@ export const UI = {
   },
 
   renderLanding(): void {
+    const bleCard = this.capabilities.hasBluetooth ? `
+        <div class="mode-card mode-card-ble" data-action="connect-ble" role="button" tabindex="0">
+          <div class="mode-card-icon">&#128280;</div>
+          <div class="mode-card-title">Connect via BLE</div>
+          <div class="mode-card-desc">Bluetooth Low Energy — no cable</div>
+        </div>
+    ` : ''
     this.showView('landing', `
       <h1>HDS Doctor</h1>
       <div class="mode-cards">
@@ -73,6 +102,7 @@ export const UI = {
           <div class="mode-card-title">Live Monitor</div>
           <div class="mode-card-desc">Real-time data stream</div>
         </div>
+        ${bleCard}
       </div>
       <p class="power-on-hint">Make sure your scale is powered on before connecting.</p>
       <div style="text-align:center;">
@@ -81,6 +111,11 @@ export const UI = {
     `, () => {
       this.appEl!.querySelectorAll('.mode-card').forEach(card => {
         const handler = () => {
+          const action = (card as HTMLElement).dataset.action
+          if (action === 'connect-ble') {
+            this.onConnectBle?.()
+            return
+          }
           const mode = (card as HTMLElement).dataset.mode as ViewName
           this.onNavigate?.(mode)
         }

@@ -99,7 +99,7 @@
 
 .mode-cards {
     display: grid;
-    grid-template-columns: 1fr 1fr 1fr;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
     gap: 1em;
     padding: 1.5em 0;
 }
@@ -118,6 +118,10 @@
 .mode-card-icon  { font-size: 1.75em; margin-bottom: 0.5em; }
 .mode-card-title { color: #222; font-size: 0.95em; font-weight: 700; margin-bottom: 0.25em; }
 .mode-card-desc  { color: #666; font-size: 0.8em; }
+
+.mode-card-ble { border-color: #4287f5; }
+.mode-card-ble:hover { border-color: #1a5fcc; }
+.mode-card-ble .mode-card-title { color: #1a5fcc; }
 
 /* ── Verdicts ─────────────────────────────────────────────────────────────── */
 
