@@ -4,15 +4,20 @@ import { LiveChart } from './chart'
 
 type ViewName = 'landing' | 'quick-check' | 'guided' | 'live-monitor' | 'report'
 
+const SELECTED_METHOD_KEY = 'hdsDoctor.connectMethod'
+
 export const UI = {
   appEl: null as HTMLElement | null,
   connectionBar: {
     dot: null as HTMLElement | null,
     text: null as HTMLElement | null,
     btn: null as HTMLButtonElement | null,
+    caret: null as HTMLButtonElement | null,
+    menu: null as HTMLElement | null,
   },
   currentView: null as ViewName | null,
   capabilities: { hasSerial: false, hasBluetooth: false },
+  selectedMethod: 'usb' as 'usb' | 'ble',
   onNavigate: null as ((view: ViewName) => void) | null,
   onConnect: null as (() => void) | null,
   onConnectBle: null as (() => void) | null,
@@ -23,17 +28,103 @@ export const UI = {
     this.connectionBar.dot = document.getElementById('status-indicator')
     this.connectionBar.text = document.getElementById('status-text')
     this.connectionBar.btn = document.getElementById('connect-btn') as HTMLButtonElement
+    this.connectionBar.caret = document.getElementById('connect-caret') as HTMLButtonElement
+    this.connectionBar.menu = document.getElementById('connect-menu')
     if (caps) this.capabilities = caps
+
+    // Pick default method: persisted choice if still available, else first available transport.
+    const stored = (typeof localStorage !== 'undefined' ? localStorage.getItem(SELECTED_METHOD_KEY) : null) as 'usb' | 'ble' | null
+    if (stored === 'ble' && this.capabilities.hasBluetooth) this.selectedMethod = 'ble'
+    else if (stored === 'usb' && this.capabilities.hasSerial) this.selectedMethod = 'usb'
+    else this.selectedMethod = this.capabilities.hasSerial ? 'usb' : 'ble'
+
     this.connectionBar.btn.addEventListener('click', () => {
       if (this.connectionBar.dot?.classList.contains('connected')) {
         this.onDisconnect?.()
       } else {
-        this.onConnect?.()
+        this._fireConnect()
       }
     })
-    // Top-bar Connect button is USB-only; hide entirely if Web Serial unavailable.
-    if (!this.capabilities.hasSerial && this.connectionBar.btn) {
-      this.connectionBar.btn.style.display = 'none'
+    this._initSplitDropdown()
+    this._updateConnectButton(false)
+  },
+
+  _fireConnect(): void {
+    if (this.selectedMethod === 'ble') this.onConnectBle?.()
+    else this.onConnect?.()
+  },
+
+  _initSplitDropdown(): void {
+    const { caret, menu } = this.connectionBar
+    if (!caret || !menu) return
+
+    // Only show the caret when the user actually has a choice.
+    const bothAvailable = this.capabilities.hasSerial && this.capabilities.hasBluetooth
+    if (!bothAvailable) {
+      caret.classList.add('hidden')
+      return
+    }
+    caret.classList.remove('hidden')
+
+    const closeMenu = () => {
+      menu.classList.add('hidden')
+      caret.setAttribute('aria-expanded', 'false')
+    }
+    const openMenu = () => {
+      menu.classList.remove('hidden')
+      caret.setAttribute('aria-expanded', 'true')
+    }
+
+    caret.addEventListener('click', (e) => {
+      e.stopPropagation()
+      if (menu.classList.contains('hidden')) openMenu()
+      else closeMenu()
+    })
+
+    document.addEventListener('click', (e) => {
+      if (menu.classList.contains('hidden')) return
+      if (!menu.contains(e.target as Node) && e.target !== caret) closeMenu()
+    })
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && !menu.classList.contains('hidden')) closeMenu()
+    })
+
+    menu.querySelectorAll<HTMLElement>('.connect-menu-item').forEach(item => {
+      const method = item.dataset.method as 'usb' | 'ble'
+      // Hide options the browser can't run.
+      if (method === 'usb' && !this.capabilities.hasSerial) item.style.display = 'none'
+      if (method === 'ble' && !this.capabilities.hasBluetooth) item.style.display = 'none'
+      const activate = () => {
+        this.selectedMethod = method
+        try { localStorage.setItem(SELECTED_METHOD_KEY, method) } catch {}
+        closeMenu()
+        const isConnected = this.connectionBar.dot?.classList.contains('connected')
+        this._updateConnectButton(!!isConnected)
+        if (!isConnected) this._fireConnect()
+      }
+      item.addEventListener('click', activate)
+      item.addEventListener('keydown', (e) => {
+        if ((e as KeyboardEvent).key === 'Enter' || (e as KeyboardEvent).key === ' ') {
+          e.preventDefault()
+          activate()
+        }
+      })
+    })
+  },
+
+  _updateConnectButton(connected: boolean): void {
+    const { btn, caret } = this.connectionBar
+    if (!btn) return
+    if (connected) {
+      btn.textContent = 'Disconnect'
+      caret?.classList.add('hidden')
+    } else {
+      btn.textContent = this.selectedMethod === 'ble' ? 'Connect via BLE' : 'Connect via USB'
+      // Restore caret visibility only when both transports are available.
+      if (this.capabilities.hasSerial && this.capabilities.hasBluetooth) {
+        caret?.classList.remove('hidden')
+      }
     }
   },
 
@@ -42,7 +133,7 @@ export const UI = {
     deviceInfo?: { firmwareVersion: string; battery: number } | null,
     transportKind?: 'usb' | 'ble',
   ): void {
-    const { dot, text, btn } = this.connectionBar
+    const { dot, text } = this.connectionBar
     if (dot) {
       dot.classList.toggle('connected', connected)
       dot.classList.toggle('disconnected', !connected)
@@ -56,17 +147,7 @@ export const UI = {
         text.textContent = connected ? `Connected${transportLabel}` : 'No device connected'
       }
     }
-    if (btn) {
-      // When connected via any transport, the top button always disconnects.
-      // When not connected, only show it for USB (BLE has its own landing card).
-      if (connected) {
-        btn.textContent = 'Disconnect'
-        btn.style.display = ''
-      } else {
-        btn.textContent = 'Connect'
-        btn.style.display = this.capabilities.hasSerial ? '' : 'none'
-      }
-    }
+    this._updateConnectButton(connected)
   },
 
   showView(name: ViewName, html: string, init?: () => void): void {
@@ -77,13 +158,6 @@ export const UI = {
   },
 
   renderLanding(): void {
-    const bleCard = this.capabilities.hasBluetooth ? `
-        <div class="mode-card mode-card-ble" data-action="connect-ble" role="button" tabindex="0">
-          <div class="mode-card-icon">&#128280;</div>
-          <div class="mode-card-title">Connect via BLE</div>
-          <div class="mode-card-desc">Bluetooth Low Energy — no cable</div>
-        </div>
-    ` : ''
     this.showView('landing', `
       <h1>HDS Doctor</h1>
       <div class="mode-cards">
@@ -102,7 +176,6 @@ export const UI = {
           <div class="mode-card-title">Live Monitor</div>
           <div class="mode-card-desc">Real-time data stream</div>
         </div>
-        ${bleCard}
       </div>
       <p class="power-on-hint">Make sure your scale is powered on before connecting.</p>
       <div style="text-align:center;">
@@ -111,11 +184,6 @@ export const UI = {
     `, () => {
       this.appEl!.querySelectorAll('.mode-card').forEach(card => {
         const handler = () => {
-          const action = (card as HTMLElement).dataset.action
-          if (action === 'connect-ble') {
-            this.onConnectBle?.()
-            return
-          }
           const mode = (card as HTMLElement).dataset.mode as ViewName
           this.onNavigate?.(mode)
         }

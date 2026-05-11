@@ -14,7 +14,14 @@
     <header id="connection-bar">
         <div id="status-indicator" class="status-dot disconnected" role="status" aria-label="Disconnected"></div>
         <span id="status-text">No device connected</span>
-        <button id="connect-btn" class="button special small">Connect</button>
+        <div id="connect-split" class="connect-split">
+            <button id="connect-btn" class="button special small connect-main" type="button">Connect</button>
+            <button id="connect-caret" class="button special small connect-caret hidden" type="button" aria-haspopup="menu" aria-expanded="false" aria-label="Choose connection method">&#9662;</button>
+            <ul id="connect-menu" class="connect-menu hidden" role="menu" aria-labelledby="connect-caret">
+                <li class="connect-menu-item" role="menuitem" data-method="usb" tabindex="0">Connect via USB</li>
+                <li class="connect-menu-item" role="menuitem" data-method="ble" tabindex="0">Connect via BLE</li>
+            </ul>
+        </div>
     </header>
 
     <!-- Content area -->

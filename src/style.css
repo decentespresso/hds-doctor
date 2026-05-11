@@ -45,8 +45,57 @@
     font-family: monospace;
 }
 
-#connect-btn {
+#connect-split {
     margin-left: auto;
+    position: relative;
+    display: inline-flex;
+    align-items: stretch;
+}
+
+.connect-main {
+    border-top-right-radius: 0;
+    border-bottom-right-radius: 0;
+}
+
+.connect-caret {
+    border-top-left-radius: 0;
+    border-bottom-left-radius: 0;
+    padding-left: 0.5em;
+    padding-right: 0.5em;
+    margin-left: -1px;
+    min-width: 1.8em;
+}
+
+.connect-caret[aria-expanded="true"] {
+    background: var(--color-accent);
+    filter: brightness(0.92);
+}
+
+.connect-menu {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    margin: 0.25em 0 0;
+    padding: 0.25em 0;
+    list-style: none;
+    background: #fff;
+    border: solid 1px var(--color-panel-border);
+    border-radius: 0.35em;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.08);
+    min-width: 11em;
+    z-index: 50;
+}
+
+.connect-menu-item {
+    padding: 0.5em 0.9em;
+    font-size: 0.85em;
+    cursor: pointer;
+    color: #222;
+}
+.connect-menu-item:hover,
+.connect-menu-item:focus-visible {
+    background: var(--color-panel-bg);
+    outline: none;
 }
 
 /* ── Page container ───────────────────────────────────────────────────────── */
@@ -119,9 +168,6 @@
 .mode-card-title { color: #222; font-size: 0.95em; font-weight: 700; margin-bottom: 0.25em; }
 .mode-card-desc  { color: #666; font-size: 0.8em; }
 
-.mode-card-ble { border-color: #4287f5; }
-.mode-card-ble:hover { border-color: #1a5fcc; }
-.mode-card-ble .mode-card-title { color: #1a5fcc; }
 
 /* ── Verdicts ─────────────────────────────────────────────────────────────── */
 
@@ -699,10 +745,11 @@ input[type="checkbox"].test-checkbox {
         gap: 0.5em;
     }
 
-    #connect-btn {
+    #connect-split {
         margin-left: 0;
         width: 100%;
     }
+    .connect-main { flex: 1; }
 
     .view-header {
         flex-wrap: wrap;
