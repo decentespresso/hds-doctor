@@ -123,10 +123,11 @@ const App = {
           async (intervalMs, sampleCount) => {
             await this.transport.setSampleCount(sampleCount)
             document.getElementById('lm-data-panel')?.classList.remove('hidden')
+            UI.resetLiveData()
             UI.initChart()
             this.transport.onPacket = (packet) => {
               UI.updateLiveData(packet)
-              LiveChart.addPoint(packet.timestamp, packet.smoothedValue, packet.dataStdDev)
+              LiveChart.addPoint(packet.timestamp, packet.smoothedValue)
             }
             this.transport.startPolling(intervalMs)
           },

@@ -38,6 +38,24 @@ export function compareFirmwareVersion(a: string, b: string): number {
   return 0
 }
 
+const RESET_REASON_NAMES: Record<number, string> = {
+  0: 'ESP_RST_UNKNOWN',
+  1: 'ESP_RST_POWERON',
+  2: 'ESP_RST_EXT',
+  3: 'ESP_RST_SW',
+  4: 'ESP_RST_PANIC',
+  5: 'ESP_RST_INT_WDT',
+  6: 'ESP_RST_TASK_WDT',
+  7: 'ESP_RST_WDT',
+  8: 'ESP_RST_DEEPSLEEP',
+  9: 'ESP_RST_BROWNOUT',
+  10: 'ESP_RST_SDIO',
+}
+
+export function resetReasonName(code: number): string {
+  return RESET_REASON_NAMES[code] ?? `unknown (${code})`
+}
+
 export function computeChecksum(data: Uint8Array): number {
   let checksum = 0
   for (let i = 0; i < 40; i++) {
@@ -64,10 +82,7 @@ export function decodeDebugPacket(data: Uint8Array): DebugPacket | null {
     sps: view.getUint16(20) / 100,
     readIndex: data[22],
     samplesInUse: data[23],
-    dataMin: view.getInt32(24),
-    dataMax: view.getInt32(28),
-    dataAvg: view.getInt32(32),
-    dataStdDev: view.getUint16(36) / 10,
+    resetReason: data[24],
     dataOutOfRange: (flags & 0x01) !== 0,
     signalTimeout: (flags & 0x02) !== 0,
     tareInProgress: (flags & 0x04) !== 0,

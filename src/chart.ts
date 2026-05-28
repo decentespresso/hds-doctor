@@ -5,13 +5,13 @@ const MAX_POINTS = 200
 
 export const LiveChart = {
   plot: null as uPlot | null,
-  data: [[], [], []] as [number[], number[], number[]],  // [timestamps, smoothed, stdDev]
+  data: [[], []] as [number[], number[]],  // [timestamps, smoothed]
   startTime: 0,
   resizeObserver: null as ResizeObserver | null,
 
   init(container: HTMLElement): void {
     this.destroy()
-    this.data = [[], [], []]
+    this.data = [[], []]
     this.startTime = 0
 
     const opts: uPlot.Options = {
@@ -25,12 +25,6 @@ export const LiveChart = {
           width: 2,
           scale: 'smoothed',
         },
-        {
-          label: 'Std Dev',
-          stroke: '#e67700',
-          width: 2,
-          scale: 'stddev',
-        },
       ],
       axes: [
         { label: 'Time (s)' },
@@ -40,18 +34,10 @@ export const LiveChart = {
           side: 3,  // left
           stroke: '#47cdd9',
         },
-        {
-          label: 'Std Dev',
-          scale: 'stddev',
-          side: 1,  // right
-          stroke: '#e67700',
-          grid: { show: false },
-        },
       ],
       scales: {
         x: { time: false },
         smoothed: { auto: true },
-        stddev: { auto: true },
       },
       cursor: { show: true },
       legend: { show: true },
@@ -68,7 +54,7 @@ export const LiveChart = {
     this.resizeObserver.observe(container)
   },
 
-  addPoint(timestamp: number, smoothed: number, stdDev: number): void {
+  addPoint(timestamp: number, smoothed: number): void {
     if (!this.plot) return
 
     if (this.startTime === 0) this.startTime = timestamp
@@ -76,13 +62,11 @@ export const LiveChart = {
 
     this.data[0].push(t)
     this.data[1].push(smoothed)
-    this.data[2].push(stdDev)
 
     // Trim to rolling window
     while (this.data[0].length > MAX_POINTS) {
       this.data[0].shift()
       this.data[1].shift()
-      this.data[2].shift()
     }
 
     this.plot.setData(this.data)
@@ -93,7 +77,7 @@ export const LiveChart = {
     this.resizeObserver = null
     this.plot?.destroy()
     this.plot = null
-    this.data = [[], [], []]
+    this.data = [[], []]
     this.startTime = 0
   },
 }

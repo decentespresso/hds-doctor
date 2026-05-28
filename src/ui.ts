@@ -1,6 +1,16 @@
 import type { Verdict, TestResult, TestId, DebugPacket, Report } from './types'
 import { TEST_DEFINITIONS } from './guided'
 import { LiveChart } from './chart'
+import { resetReasonName } from './decoder'
+
+const ROLLING_STDDEV_WINDOW = 50
+
+function computeStdDev(values: number[]): number {
+  if (values.length === 0) return 0
+  const avg = values.reduce((s, v) => s + v, 0) / values.length
+  const variance = values.reduce((s, v) => s + (v - avg) ** 2, 0) / values.length
+  return Math.sqrt(variance)
+}
 
 type ViewName = 'landing' | 'quick-check' | 'guided' | 'live-monitor' | 'report'
 
@@ -555,9 +565,10 @@ export const UI = {
           <div class="lm-metric"><span class="lm-metric-label">Raw Value</span><span id="lm-raw" class="lm-metric-value">—</span></div>
           <div class="lm-metric"><span class="lm-metric-label">Smoothed</span><span id="lm-smoothed" class="lm-metric-value">—</span></div>
           <div class="lm-metric"><span class="lm-metric-label">Tare Offset</span><span id="lm-tare" class="lm-metric-value">—</span></div>
-          <div class="lm-metric"><span class="lm-metric-label">Std Dev</span><span id="lm-stddev" class="lm-metric-value">—</span></div>
+          <div class="lm-metric"><span class="lm-metric-label">Std Dev (rolling)</span><span id="lm-stddev" class="lm-metric-value">—</span></div>
           <div class="lm-metric"><span class="lm-metric-label">SPS</span><span id="lm-sps" class="lm-metric-value">—</span></div>
           <div class="lm-metric"><span class="lm-metric-label">Conv Time</span><span id="lm-conv" class="lm-metric-value">—</span></div>
+          <div class="lm-metric"><span class="lm-metric-label">Reset Reason</span><span id="lm-reset-reason" class="lm-metric-value">—</span></div>
         </div>
         <div class="lm-flags">
           <span class="lm-flag"><span id="flag-oor" class="lm-flag-dot"></span> OutOfRange</span>
@@ -565,12 +576,6 @@ export const UI = {
           <span class="lm-flag"><span id="flag-tare" class="lm-flag-dot"></span> TareInProgress</span>
         </div>
         <div id="lm-chart" class="lm-chart-container"></div>
-        <div class="lm-stats-grid">
-          <div class="lm-metric"><span class="lm-metric-label">Min</span><span id="lm-min" class="lm-metric-value">—</span></div>
-          <div class="lm-metric"><span class="lm-metric-label">Max</span><span id="lm-max" class="lm-metric-value">—</span></div>
-          <div class="lm-metric"><span class="lm-metric-label">Avg</span><span id="lm-avg" class="lm-metric-value">—</span></div>
-          <div class="lm-metric"><span class="lm-metric-label">Range</span><span id="lm-range" class="lm-metric-value">—</span></div>
-        </div>
         <div class="lm-history-wrap">
           <table class="lm-history-table">
             <thead>
@@ -609,6 +614,12 @@ export const UI = {
     })
   },
 
+  _rollingRaw: [] as number[],
+
+  resetLiveData(): void {
+    this._rollingRaw = []
+  },
+
   updateLiveData(packet: DebugPacket): void {
     const set = (id: string, val: string) => {
       const el = document.getElementById(id)
@@ -620,17 +631,18 @@ export const UI = {
     set('lm-tare', String(packet.tareOffset))
     set('lm-sps', packet.sps.toFixed(2))
     set('lm-conv', packet.conversionTime.toFixed(2) + ' ms')
-    set('lm-min', String(packet.dataMin))
-    set('lm-max', String(packet.dataMax))
-    set('lm-avg', String(packet.dataAvg))
-    set('lm-range', String(packet.dataMax - packet.dataMin))
+    set('lm-reset-reason', resetReasonName(packet.resetReason))
+
+    this._rollingRaw.push(packet.rawValue)
+    if (this._rollingRaw.length > ROLLING_STDDEV_WINDOW) this._rollingRaw.shift()
+    const stdDev = computeStdDev(this._rollingRaw)
 
     const stdDevEl = document.getElementById('lm-stddev')
     if (stdDevEl) {
-      stdDevEl.textContent = packet.dataStdDev.toFixed(1)
+      stdDevEl.textContent = stdDev.toFixed(1)
       stdDevEl.className = 'lm-metric-value ' + (
-        packet.dataStdDev < 25 ? 'lm-stddev-good'
-        : packet.dataStdDev <= 60 ? 'lm-stddev-warn'
+        stdDev < 25 ? 'lm-stddev-good'
+        : stdDev <= 60 ? 'lm-stddev-warn'
         : 'lm-stddev-bad'
       )
     }
@@ -648,7 +660,7 @@ export const UI = {
     const tbody = document.getElementById('lm-history-body') as HTMLTableSectionElement | null
     if (tbody) {
       const tr = document.createElement('tr')
-      tr.innerHTML = `<td>${packet.timestamp}</td><td>${packet.rawValue}</td><td>${packet.smoothedValue}</td><td>${packet.dataStdDev.toFixed(1)}</td>`
+      tr.innerHTML = `<td>${packet.timestamp}</td><td>${packet.rawValue}</td><td>${packet.smoothedValue}</td><td>${stdDev.toFixed(1)}</td>`
       tbody.prepend(tr)
       while (tbody.rows.length > 50) {
         tbody.deleteRow(tbody.rows.length - 1)
@@ -692,7 +704,7 @@ export const UI = {
               ` : ''}
               <table class="report-packets-table">
                 <thead>
-                  <tr><th>Time (ms)</th><th>Raw</th><th>Smoothed</th><th>StdDev</th><th>SPS</th><th>Flags</th></tr>
+                  <tr><th>Time (ms)</th><th>Raw</th><th>Smoothed</th><th>SPS</th><th>Flags</th></tr>
                 </thead>
                 <tbody>
                   ${r.rawPackets.map(p => `
@@ -700,7 +712,6 @@ export const UI = {
                       <td>${p.timestamp}</td>
                       <td>${p.rawValue}</td>
                       <td>${p.smoothedValue}</td>
-                      <td>${p.dataStdDev.toFixed(1)}</td>
                       <td>${p.sps.toFixed(1)}</td>
                       <td>${[
                         p.dataOutOfRange ? 'OOR' : '',

@@ -26,14 +26,9 @@ function buildPacket(overrides: Partial<Record<string, number>> = {}): Uint8Arra
   arr[22] = overrides.readIndex ?? 5
   // Samples in use
   arr[23] = overrides.samplesInUse ?? 10
-  // Data min
-  view.setInt32(24, overrides.dataMin ?? 49500)
-  // Data max
-  view.setInt32(28, overrides.dataMax ?? 50500)
-  // Data avg
-  view.setInt32(32, overrides.dataAvg ?? 50000)
-  // Std dev: 42 (= 4.2)
-  view.setUint16(36, overrides.dataStdDev ?? 42)
+  // Reset reason (byte 24)
+  arr[24] = overrides.resetReason ?? 0
+  // Bytes 25-37 reserved (zero)
   // Flags: none
   arr[38] = overrides.flags ?? 0x00
   // Tare times
@@ -66,10 +61,7 @@ describe('decodeDebugPacket', () => {
     expect(result!.sps).toBeCloseTo(10.0)
     expect(result!.readIndex).toBe(5)
     expect(result!.samplesInUse).toBe(10)
-    expect(result!.dataMin).toBe(49500)
-    expect(result!.dataMax).toBe(50500)
-    expect(result!.dataAvg).toBe(50000)
-    expect(result!.dataStdDev).toBeCloseTo(4.2)
+    expect(result!.resetReason).toBe(0)
     expect(result!.dataOutOfRange).toBe(false)
     expect(result!.signalTimeout).toBe(false)
     expect(result!.tareInProgress).toBe(false)
@@ -105,6 +97,27 @@ describe('decodeDebugPacket', () => {
     const packet = buildPacket({ rawValue: -12345 })
     const result = decodeDebugPacket(packet)
     expect(result!.rawValue).toBe(-12345)
+  })
+
+  it('decodes resetReason byte 24', () => {
+    const packet = buildPacket({ resetReason: 1 })
+    const result = decodeDebugPacket(packet)
+    expect(result!.resetReason).toBe(1)
+  })
+})
+
+describe('resetReasonName', () => {
+  it('maps known codes to ESP_RST_ names', async () => {
+    const { resetReasonName } = await import('../src/decoder')
+    expect(resetReasonName(0)).toBe('ESP_RST_UNKNOWN')
+    expect(resetReasonName(1)).toBe('ESP_RST_POWERON')
+    expect(resetReasonName(4)).toBe('ESP_RST_PANIC')
+    expect(resetReasonName(10)).toBe('ESP_RST_SDIO')
+  })
+
+  it('formats unknown codes', async () => {
+    const { resetReasonName } = await import('../src/decoder')
+    expect(resetReasonName(99)).toBe('unknown (99)')
   })
 })
 

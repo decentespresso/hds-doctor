@@ -10,8 +10,7 @@ const mockResults: TestResult[] = [
     rawPackets: [{
       timestamp: 1000, rawValue: 50000, smoothedValue: 49800,
       tareOffset: 100, conversionTime: 12.34, sps: 10.0,
-      readIndex: 5, samplesInUse: 10, dataMin: 49500,
-      dataMax: 50500, dataAvg: 50000, dataStdDev: 4.2,
+      readIndex: 5, samplesInUse: 10, resetReason: 0,
       dataOutOfRange: false, signalTimeout: false,
       tareInProgress: false, tareTimes: 0,
     }],

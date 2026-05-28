@@ -7,8 +7,8 @@ function pkt(rawValue: number): DebugPacket {
     timestamp: 1000, rawValue, smoothedValue: rawValue,
     tareOffset: 100, conversionTime: 12.34, sps: 10.0,
     readIndex: 5, samplesInUse: 10,
-    dataMin: rawValue - 100, dataMax: rawValue + 100, dataAvg: rawValue,
-    dataStdDev: 4.2, dataOutOfRange: false, signalTimeout: false,
+    resetReason: 0,
+    dataOutOfRange: false, signalTimeout: false,
     tareInProgress: false, tareTimes: 0,
   }
 }

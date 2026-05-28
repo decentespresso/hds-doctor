@@ -8,10 +8,7 @@ export interface DebugPacket {
   sps: number             // samples/sec (float, decoded from uint16 * 0.01)
   readIndex: number       // uint8
   samplesInUse: number    // uint8
-  dataMin: number         // int32
-  dataMax: number         // int32
-  dataAvg: number         // int32
-  dataStdDev: number      // float (decoded from uint16 * 0.1)
+  resetReason: number     // uint8, raw esp_reset_reason() code captured at boot
   dataOutOfRange: boolean
   signalTimeout: boolean
   tareInProgress: boolean

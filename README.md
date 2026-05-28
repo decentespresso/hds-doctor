@@ -108,7 +108,7 @@ Debug packets are 41 bytes with header `0x03 0x25` and XOR checksum. Request wit
 03 25 02 24
 ```
 
-Each packet contains: raw ADC value, smoothed value, tare offset, conversion time, SPS, statistics (min/max/avg/std dev), and status flags.
+Each packet contains: raw ADC value, smoothed value, tare offset, conversion time, SPS, the boot-time `esp_reset_reason()` code (byte 24), and status flags. Bytes 25-37 are reserved/zero. Std-dev / noise statistics are computed client-side from `rawValue` history.
 
 ## Tech Stack
 

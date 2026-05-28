@@ -7,28 +7,31 @@ function makePacket(overrides: Partial<DebugPacket> = {}): DebugPacket {
     timestamp: 1000, rawValue: 50000, smoothedValue: 49800,
     tareOffset: 100, conversionTime: 12.34, sps: 10.0,
     readIndex: 5, samplesInUse: 10,
-    dataMin: 49500, dataMax: 50500, dataAvg: 50000,
-    dataStdDev: 4.2, dataOutOfRange: false, signalTimeout: false,
+    resetReason: 0,
+    dataOutOfRange: false, signalTimeout: false,
     tareInProgress: false, tareTimes: 0,
     ...overrides,
   }
 }
 
 describe('evaluateNoiseStability', () => {
-  it('passes with low std dev', () => {
-    const packets = Array.from({ length: 10 }, (_, i) => makePacket({ dataStdDev: 5, rawValue: 50000 + i }))
+  it('passes with low raw-value spread', () => {
+    // rawValues 50000..50009 → stddev ≈ 2.87
+    const packets = Array.from({ length: 10 }, (_, i) => makePacket({ rawValue: 50000 + i }))
     const result = evaluateNoiseStability(packets)
     expect(result.verdict).toBe('pass')
   })
 
-  it('warns with moderate std dev', () => {
-    const packets = Array.from({ length: 10 }, () => makePacket({ dataStdDev: 30 }))
+  it('warns with moderate raw-value spread', () => {
+    // rawValues 50000..50090 step 10 → stddev ≈ 28.7
+    const packets = Array.from({ length: 10 }, (_, i) => makePacket({ rawValue: 50000 + i * 10 }))
     const result = evaluateNoiseStability(packets)
     expect(result.verdict).toBe('warning')
   })
 
-  it('fails with high std dev', () => {
-    const packets = Array.from({ length: 10 }, () => makePacket({ dataStdDev: 100 }))
+  it('fails with high raw-value spread', () => {
+    // rawValues 50000..50450 step 50 → stddev ≈ 143
+    const packets = Array.from({ length: 10 }, (_, i) => makePacket({ rawValue: 50000 + i * 50 }))
     const result = evaluateNoiseStability(packets)
     expect(result.verdict).toBe('fail')
   })

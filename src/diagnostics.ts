@@ -2,10 +2,7 @@ import type { DebugPacket, TestResult, Verdict } from './types'
 import { classifyRawPattern } from './classifier'
 
 export function evaluateNoiseStability(packets: DebugPacket[]): TestResult {
-  // If firmware-reported std dev is all zero (1-sample mode), compute
-  // standard deviation across raw values from individual packets instead.
-  const fwStdDev = packets.reduce((sum, p) => sum + p.dataStdDev, 0) / packets.length
-  const stdDev = fwStdDev > 0 ? fwStdDev : computeStdDev(packets.map(p => p.rawValue))
+  const stdDev = computeStdDev(packets.map(p => p.rawValue))
 
   // Classify raw ADC pattern for differential diagnosis
   const rawDiagnostic = classifyRawPattern(packets)
