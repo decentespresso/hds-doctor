@@ -5,6 +5,8 @@ import type { DebugPacket } from './types'
 const SERVICE_UUID = '0000fff0-0000-1000-8000-00805f9b34fb'
 const WRITE_UUID = '000036f5-0000-1000-8000-00805f9b34fb'
 const NOTIFY_UUID = '0000fff4-0000-1000-8000-00805f9b34fb'
+const LED_RESPONSE_LENGTH = 7
+const DEBUG_PACKET_LENGTH = 41
 
 const DEBUG_REQUEST: Uint8Array = new Uint8Array([0x03, 0x25, 0x02, 0x24])
 // Firmware enum: 0=OFF, 1=CONTINUOUS, 2=SINGLE. Checksum = XOR of preceding bytes.
@@ -25,6 +27,7 @@ export const BLE = {
   server: null as BluetoothRemoteGATTServer | null,
   writeChar: null as BluetoothRemoteGATTCharacteristic | null,
   notifyChar: null as BluetoothRemoteGATTCharacteristic | null,
+  buffer: new Uint8Array(0),
   streaming: false,
   heartbeatTimer: null as ReturnType<typeof setInterval> | null,
   onPacket: null as PacketCallback | null,
@@ -111,24 +114,72 @@ export const BLE = {
     this.server = null
     this.writeChar = null
     this.notifyChar = null
+    this.buffer = new Uint8Array(0)
     this.deviceInfo = null
     this._notifyHandler = null
     this._disconnectHandler = null
   },
 
   _handleNotification(view: DataView): void {
-    const data = new Uint8Array(view.buffer, view.byteOffset, view.byteLength)
-    if (data.length < 2 || data[0] !== 0x03) return
-    if (data[1] === 0x0A && data.length === 7) {
-      const info = decodeLedResponse(data)
-      if (info) {
-        this.deviceInfo = info
-        this.onLedResponse?.(info)
+    const incoming = new Uint8Array(view.buffer, view.byteOffset, view.byteLength)
+    const combined = new Uint8Array(this.buffer.length + incoming.length)
+    combined.set(this.buffer)
+    combined.set(incoming, this.buffer.length)
+    this.buffer = combined
+
+    while (this.buffer.length >= 2) {
+      const ledIdx = this._findLedHeader(this.buffer)
+      const debugIdx = this._findDebugHeader(this.buffer)
+      const firstIdx = ledIdx === -1 ? debugIdx
+        : debugIdx === -1 ? ledIdx
+        : Math.min(ledIdx, debugIdx)
+
+      if (firstIdx === -1) {
+        this.buffer = this.buffer.slice(Math.max(0, this.buffer.length - 1))
+        break
       }
-    } else if (data[1] === 0x25 && data.length === 41) {
-      const packet = decodeDebugPacket(data)
-      if (packet) this.onPacket?.(packet)
+
+      if (firstIdx > 0) {
+        this.buffer = this.buffer.slice(firstIdx)
+      }
+
+      if (this.buffer[1] === 0x0A) {
+        if (this.buffer.length < LED_RESPONSE_LENGTH) break
+        const ledBytes = this.buffer.slice(0, LED_RESPONSE_LENGTH)
+        const info = decodeLedResponse(ledBytes)
+        if (info) {
+          this.deviceInfo = info
+          this.onLedResponse?.(info)
+          this.buffer = this.buffer.slice(LED_RESPONSE_LENGTH)
+        } else {
+          this.buffer = this.buffer.slice(1)
+        }
+      } else {
+        if (this.buffer.length < DEBUG_PACKET_LENGTH) break
+        const packetBytes = this.buffer.slice(0, DEBUG_PACKET_LENGTH)
+        const packet = decodeDebugPacket(packetBytes)
+        if (packet) {
+          this.onPacket?.(packet)
+          this.buffer = this.buffer.slice(DEBUG_PACKET_LENGTH)
+        } else {
+          this.buffer = this.buffer.slice(1)
+        }
+      }
     }
+  },
+
+  _findDebugHeader(data: Uint8Array): number {
+    for (let i = 0; i <= data.length - 2; i++) {
+      if (data[i] === 0x03 && data[i + 1] === 0x25) return i
+    }
+    return -1
+  },
+
+  _findLedHeader(data: Uint8Array): number {
+    for (let i = 0; i <= data.length - 2; i++) {
+      if (data[i] === 0x03 && data[i + 1] === 0x0A) return i
+    }
+    return -1
   },
 
   async _write(bytes: Uint8Array): Promise<void> {

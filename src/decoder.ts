@@ -15,11 +15,15 @@ export function decodeLedResponse(data: Uint8Array): LedResponse | null {
 
   const verHigh = data[5]
   const verLow = data[6]
+  if (verHigh === 0x00 && verLow === 0x00) return null
+  if ((verHigh >> 4) > 9 || (verHigh & 0x0F) > 9 || (verLow >> 4) > 9 || (verLow & 0x0F) > 9) return null
+
   const major = ((verHigh >> 4) * 10) + (verHigh & 0x0F)
   const minor = (verLow >> 4)
   const patch = (verLow & 0x0F)
 
   const batteryByte = data[4]
+  if (batteryByte !== 0xFF && batteryByte > 100) return null
   const battery = batteryByte === 0xFF ? -1 : batteryByte
 
   return {
