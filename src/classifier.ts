@@ -18,27 +18,28 @@ export function classifyRawPattern(packets: DebugPacket[]): RawPatternDiagnostic
   }
 
   const firstRaw = packets[0].rawValue
+  const firstRaw24 = toUnsigned24(firstRaw)
   const firstHex = toHex24(firstRaw)
 
-  // Check if all raw values are identical (pinned)
-  const allIdentical = packets.every(p => p.rawValue === firstRaw)
+  // Decoded packets may carry sign-extended int32 values for the 24-bit ADC.
+  const allIdentical = packets.every(p => toUnsigned24(p.rawValue) === firstRaw24)
 
   if (allIdentical) {
-    if (firstRaw === 0xFFFFFF) {
+    if (firstRaw24 === 0xFFFFFF) {
       return {
         pattern: 'saturated-high',
         rawValueHex: firstHex,
         description: `ADC pinned at ${firstHex} — open differential, AINP > AINN bias. Likely cold solder joint on U21 (ADS1232), broken load cell cable, or lifted AINN trace. Try gentle flex near U21 first.`,
       }
     }
-    if (firstRaw === 0x000000) {
+    if (firstRaw24 === 0x000000) {
       return {
         pattern: 'saturated-low',
         rawValueHex: firstHex,
         description: `ADC pinned at ${firstHex} — shorted input or AINP = AINN. Check for solder bridge across AINP/AINN pins, damaged load cell bridge, or broken VREF path.`,
       }
     }
-    if (Math.abs(firstRaw - 0x800000) < 50000) {
+    if (Math.abs(firstRaw24 - 0x800000) < 50000) {
       return {
         pattern: 'midscale-frozen',
         rawValueHex: firstHex,
@@ -77,6 +78,10 @@ export function classifyRawPattern(packets: DebugPacket[]): RawPatternDiagnostic
 /** Format a signed 24-bit integer as a 6-character hex string */
 function toHex24(value: number): string {
   // Mask to 24 bits, zero-pad to 6 hex digits
-  const masked = value & 0xFFFFFF
+  const masked = toUnsigned24(value)
   return '0x' + masked.toString(16).toUpperCase().padStart(6, '0')
+}
+
+function toUnsigned24(value: number): number {
+  return value & 0xFFFFFF
 }
