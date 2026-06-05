@@ -149,7 +149,7 @@ const App = {
   // ── Quick Check ──────────────────────────────────────────────────────────
 
   async runQuickCheck(): Promise<void> {
-    await this.transport.setSampleCount(1)
+    await this.transport.setSampleCount(4)
     const DURATION_MS = 10_000
     const POLL_INTERVAL_MS = 100
     const packets: DebugPacket[] = []
