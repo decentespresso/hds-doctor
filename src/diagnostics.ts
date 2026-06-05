@@ -50,6 +50,10 @@ function computeStdDev(values: number[]): number {
   return Math.sqrt(variance)
 }
 
+function computeRange(values: number[]): number {
+  return Math.max(...values) - Math.min(...values)
+}
+
 export function evaluateConnectionHealth(packets: DebugPacket[]): TestResult {
   if (packets.length === 0) return noDataResult('connection-health', packets)
 
@@ -122,23 +126,23 @@ export function evaluateLoadCellBond(
 export function evaluateDrift(packets: DebugPacket[]): TestResult {
   if (packets.length === 0) return noDataResult('drift', packets)
 
-  const values = packets.map(p => p.smoothedValue)
-  const min = Math.min(...values)
-  const max = Math.max(...values)
-  const range = max - min
+  const smoothedRange = computeRange(packets.map(p => p.smoothedValue))
+  const tareRange = computeRange(packets.map(p => p.tareOffset))
+  const range = Math.max(smoothedRange, tareRange)
+  const source = tareRange >= smoothedRange ? 'tare offset' : 'readings'
 
   let verdict: Verdict
   let summary: string
 
   if (range < 5) {
     verdict = 'pass'
-    summary = `Readings stable (drift range ${range})`
+    summary = `Drift stable (${source} range ${range})`
   } else if (range < 50) {
     verdict = 'warning'
-    summary = `Some drift detected (range ${range})`
+    summary = `Some drift detected (${source} range ${range})`
   } else {
     verdict = 'fail'
-    summary = `Significant drift (range ${range})`
+    summary = `Significant drift (${source} range ${range})`
   }
 
   const overridable = verdict === 'fail' ? true : undefined
