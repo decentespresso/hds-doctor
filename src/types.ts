@@ -32,6 +32,8 @@ export interface TestResult {
   rawPackets: DebugPacket[]
   overridable?: boolean
   rawPatternDiagnostic?: RawPatternDiagnostic
+  invalid?: boolean
+  invalidReason?: 'tare-changed'
 }
 
 export interface Report {

@@ -121,6 +121,23 @@ describe('evaluateDrift', () => {
     const result = evaluateDrift(packets)
     expect(result.verdict).toBe('fail')
   })
+
+  it('reports drift from the net raw signal', () => {
+    const packets = Array.from({ length: 30 }, (_, i) => makePacket({
+      smoothedValue: 49800 + i,
+    }))
+    const result = evaluateDrift(packets)
+    expect(result.verdict).toBe('warning')
+    expect(result.summary).toContain('net signal')
+  })
+
+  it('returns an invalid tare-changed result when tare changes during capture', () => {
+    const packets = Array.from({ length: 30 }, (_, i) => makePacket({ tareOffset: 100 + i }))
+    const result = evaluateDrift(packets)
+    expect(result.verdict).toBe('fail')
+    expect(result.invalid).toBe(true)
+    expect(result.invalidReason).toBe('tare-changed')
+  })
 })
 
 describe('overallVerdict', () => {
