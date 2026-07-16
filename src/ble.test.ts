@@ -36,6 +36,7 @@ function resetBle(): void {
   BLE.onStatus = null
   BLE.onLedResponse = null
   BLE.streaming = false
+  BLE.buffer = new Uint8Array(0)
 }
 
 function attachWriteCapture(writes: Uint8Array[]): void {
@@ -185,6 +186,60 @@ describe('BLE notification demux', () => {
     BLE._handleNotification(toDataView(bad))
     expect(pktSpy).not.toHaveBeenCalled()
     expect(ledSpy).not.toHaveBeenCalled()
+  })
+
+  it.each(Array.from({ length: 40 }, (_, index) => index + 1))('reassembles a frame split at byte %i', (splitPoint) => {
+    const pktSpy = vi.fn()
+    const packet = buildDebugPacket()
+    BLE.onPacket = pktSpy
+    BLE._handleNotification(toDataView(packet.slice(0, splitPoint)))
+    BLE._handleNotification(toDataView(packet.slice(splitPoint)))
+    expect(pktSpy).toHaveBeenCalledTimes(1)
+  })
+
+  it('routes concatenated debug frames independently', () => {
+    const pktSpy = vi.fn()
+    const first = buildDebugPacket()
+    const second = buildDebugPacket()
+    const combined = new Uint8Array(first.length + second.length)
+    combined.set(first)
+    combined.set(second, first.length)
+    BLE.onPacket = pktSpy
+    BLE._handleNotification(toDataView(combined))
+    expect(pktSpy).toHaveBeenCalledTimes(2)
+  })
+
+  it('drops leading garbage before a valid frame', () => {
+    const pktSpy = vi.fn()
+    const packet = buildDebugPacket()
+    const incoming = new Uint8Array([0x99, 0x88, 0x77, ...packet])
+    BLE.onPacket = pktSpy
+    BLE._handleNotification(toDataView(incoming))
+    expect(pktSpy).toHaveBeenCalledTimes(1)
+  })
+
+  it('continues after a corrupt checksum when a valid frame follows', () => {
+    const pktSpy = vi.fn()
+    const corrupt = buildDebugPacket()
+    const valid = buildDebugPacket()
+    corrupt[40] ^= 0x01
+    const incoming = new Uint8Array(corrupt.length + valid.length)
+    incoming.set(corrupt)
+    incoming.set(valid, corrupt.length)
+    BLE.onPacket = pktSpy
+    BLE._handleNotification(toDataView(incoming))
+    expect(pktSpy).toHaveBeenCalledTimes(1)
+  })
+
+  it('clears buffered bytes during reconnect cleanup', async () => {
+    BLE.buffer = new Uint8Array([0x03, 0x25, 0x00])
+    await BLE._cleanup()
+    expect(BLE.buffer).toHaveLength(0)
+  })
+
+  it('keeps malformed stream data bounded', () => {
+    BLE._handleNotification(toDataView(new Uint8Array(4096).fill(0x99)))
+    expect(BLE.buffer.length).toBeLessThanOrEqual(40)
   })
 })
 
