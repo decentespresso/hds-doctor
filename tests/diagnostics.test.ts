@@ -44,6 +44,24 @@ describe('evaluateConnectionHealth', () => {
     expect(result.verdict).toBe('pass')
   })
 
+  it('fails when timeout-only packets are persistent', () => {
+    const packets = Array.from({ length: 10 }, (_, i) => makePacket({ signalTimeout: i < 6 }))
+    expect(evaluateConnectionHealth(packets).verdict).toBe('fail')
+  })
+
+  it('fails when out-of-range-only packets are persistent', () => {
+    const packets = Array.from({ length: 10 }, (_, i) => makePacket({ dataOutOfRange: i < 6 }))
+    expect(evaluateConnectionHealth(packets).verdict).toBe('fail')
+  })
+
+  it('counts a packet with both flags once', () => {
+    const packets = Array.from({ length: 10 }, (_, i) => makePacket({
+      signalTimeout: i < 5,
+      dataOutOfRange: i < 5,
+    }))
+    expect(evaluateConnectionHealth(packets).verdict).toBe('warning')
+  })
+
   it('fails with persistent timeouts', () => {
     const packets = Array.from({ length: 10 }, () => makePacket({ signalTimeout: true }))
     const result = evaluateConnectionHealth(packets)
