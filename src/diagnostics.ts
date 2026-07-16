@@ -59,7 +59,8 @@ export function evaluateConnectionHealth(packets: DebugPacket[]): TestResult {
 
   const timeoutCount = packets.filter(p => p.signalTimeout).length
   const oorCount = packets.filter(p => p.dataOutOfRange).length
-  const flagRatio = (timeoutCount + oorCount) / packets.length
+  const errorPacketCount = packets.filter(p => p.signalTimeout || p.dataOutOfRange).length
+  const flagRatio = errorPacketCount / packets.length
   const avgSps = packets.reduce((sum, p) => sum + p.sps, 0) / packets.length
 
   let verdict: Verdict
