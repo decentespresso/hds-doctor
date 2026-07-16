@@ -17,7 +17,7 @@ export interface DebugPacket {
 
 export type Verdict = 'pass' | 'warning' | 'fail'
 
-export type RawPattern = 'saturated-high' | 'saturated-low' | 'midscale-frozen' | 'wandering' | 'responsive'
+export type RawPattern = 'rail-positive' | 'rail-negative' | 'stuck-constant' | 'low-variation' | 'normal'
 
 export interface RawPatternDiagnostic {
   pattern: RawPattern
