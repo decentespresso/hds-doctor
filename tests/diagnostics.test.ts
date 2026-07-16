@@ -132,3 +132,29 @@ describe('overallVerdict', () => {
     expect(overallVerdict(results)).toBe('fail')
   })
 })
+
+describe('empty captures', () => {
+  it('fails noise stability with zero packets', () => {
+    const result = evaluateNoiseStability([])
+    expect(result.verdict).toBe('fail')
+    expect(result.rawPackets).toEqual([])
+  })
+
+  it('fails connection health with zero packets', () => {
+    const result = evaluateConnectionHealth([])
+    expect(result.verdict).toBe('fail')
+    expect(result.rawPackets).toEqual([])
+  })
+
+  it('fails load-cell bond with zero packets in both phases', () => {
+    const result = evaluateLoadCellBond([], [])
+    expect(result.verdict).toBe('fail')
+    expect(result.rawPackets).toEqual([])
+  })
+
+  it('fails drift with zero packets', () => {
+    const result = evaluateDrift([])
+    expect(result.verdict).toBe('fail')
+    expect(result.rawPackets).toEqual([])
+  })
+})
