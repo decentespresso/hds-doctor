@@ -1,7 +1,19 @@
 import type { DebugPacket, TestResult, Verdict } from './types'
 import { classifyRawPattern } from './classifier'
 
+function noDataResult(testId: string, rawPackets: DebugPacket[], phase?: string): TestResult {
+  const phaseText = phase ? ` during the ${phase} phase` : ''
+  return {
+    testId,
+    verdict: 'fail',
+    summary: `No valid debug packets collected${phaseText} - check connection and firmware debug output`,
+    rawPackets,
+  }
+}
+
 export function evaluateNoiseStability(packets: DebugPacket[]): TestResult {
+  if (packets.length === 0) return noDataResult('noise-stability', packets)
+
   const stdDev = computeStdDev(packets.map(p => p.rawValue))
 
   // Classify raw ADC pattern for differential diagnosis
@@ -39,6 +51,8 @@ function computeStdDev(values: number[]): number {
 }
 
 export function evaluateConnectionHealth(packets: DebugPacket[]): TestResult {
+  if (packets.length === 0) return noDataResult('connection-health', packets)
+
   const timeoutCount = packets.filter(p => p.signalTimeout).length
   const oorCount = packets.filter(p => p.dataOutOfRange).length
   const flagRatio = (timeoutCount + oorCount) / packets.length
@@ -68,6 +82,10 @@ export function evaluateLoadCellBond(
   emptyPackets: DebugPacket[],
   loadedPackets: DebugPacket[]
 ): TestResult {
+  const rawPackets = [...emptyPackets, ...loadedPackets]
+  if (emptyPackets.length === 0) return noDataResult('load-cell-bond', rawPackets, 'empty')
+  if (loadedPackets.length === 0) return noDataResult('load-cell-bond', rawPackets, 'loaded')
+
   const emptyAvg = emptyPackets.reduce((s, p) => s + p.smoothedValue, 0) / emptyPackets.length
   const loadedAvg = loadedPackets.reduce((s, p) => s + p.smoothedValue, 0) / loadedPackets.length
   const delta = Math.abs(loadedAvg - emptyAvg)
@@ -76,7 +94,6 @@ export function evaluateLoadCellBond(
   const loadedVariance = loadedValues.reduce((s, v) => s + (v - loadedAvg) ** 2, 0) / loadedValues.length
 
   // Classify raw ADC pattern for differential diagnosis
-  const rawPackets = [...emptyPackets, ...loadedPackets]
   const rawDiagnostic = classifyRawPattern(rawPackets)
 
   let verdict: Verdict
@@ -103,6 +120,8 @@ export function evaluateLoadCellBond(
 }
 
 export function evaluateDrift(packets: DebugPacket[]): TestResult {
+  if (packets.length === 0) return noDataResult('drift', packets)
+
   const values = packets.map(p => p.smoothedValue)
   const min = Math.min(...values)
   const max = Math.max(...values)
