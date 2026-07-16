@@ -38,27 +38,95 @@ function computeStdDev(values: number[]): number {
   return Math.sqrt(variance)
 }
 
-export function evaluateConnectionHealth(packets: DebugPacket[]): TestResult {
+function uint32Delta(start: number, end: number): number {
+  return (end - start) >>> 0
+}
+
+function percentile(sortedValues: number[], fraction: number): number {
+  const position = (sortedValues.length - 1) * fraction
+  const lower = Math.floor(position)
+  const upper = Math.ceil(position)
+  if (lower === upper) return sortedValues[lower]
+  return sortedValues[lower] + (sortedValues[upper] - sortedValues[lower]) * (position - lower)
+}
+
+function requiredSequenceProgress(requestedDurationMs: number): number {
+  return Math.max(2, Math.ceil(requestedDurationMs / 1000))
+}
+
+export function hasFreshConversionProgress(
+  packets: DebugPacket[],
+  requestedDurationMs = 0
+): boolean {
+  if (packets.length < 2 || packets.some(packet => packet.protocolVersion < 1)) return false
+
+  const first = packets[0]
+  const last = packets[packets.length - 1]
+  const sequences = packets.map(packet => packet.conversionSequence)
+  const minimumProgress = requiredSequenceProgress(requestedDurationMs)
+  const timestampThreshold = requestedDurationMs > 0
+    ? Math.floor(requestedDurationMs * 0.8)
+    : 1
+
+  return new Set(sequences).size >= minimumProgress
+    && uint32Delta(first.conversionSequence, last.conversionSequence) >= minimumProgress - 1
+    && uint32Delta(first.lastConversionTimestamp, last.lastConversionTimestamp) >= timestampThreshold
+}
+
+export function evaluateConnectionHealth(
+  packets: DebugPacket[],
+  requestedDurationMs = 0
+): TestResult {
+  if (packets.length === 0) {
+    return {
+      testId: 'connection-health',
+      verdict: 'fail',
+      summary: 'No valid debug packets collected - freshness cannot be verified',
+      rawPackets: packets,
+    }
+  }
+
+  if (packets.some(packet => packet.protocolVersion < 1)) {
+    return {
+      testId: 'connection-health',
+      verdict: 'fail',
+      summary: 'Freshness metadata unavailable - update scale firmware',
+      rawPackets: packets,
+    }
+  }
+
   const timeoutCount = packets.filter(p => p.signalTimeout).length
   const oorCount = packets.filter(p => p.dataOutOfRange).length
   const errorPacketCount = packets.filter(p => p.signalTimeout || p.dataOutOfRange).length
-  const flagRatio = errorPacketCount / packets.length
-  const avgSps = packets.reduce((sum, p) => sum + p.sps, 0) / packets.length
+  const errorPacketRatio = errorPacketCount / packets.length
+  const zeroSpsCount = packets.filter(p => p.sps === 0).length
+  const zeroSpsRatio = zeroSpsCount / packets.length
+  const sortedSps = packets.map(p => p.sps).sort((a, b) => a - b)
+  const minSps = sortedSps[0]
+  const medianSps = percentile(sortedSps, 0.5)
+  const lowerPercentileSps = percentile(sortedSps, 0.1)
+  const noProgressCount = packets.slice(1).filter((packet, index) =>
+    uint32Delta(packets[index].conversionSequence, packet.conversionSequence) === 0
+  ).length
+  const noProgressRatio = packets.length < 2 ? 1 : noProgressCount / (packets.length - 1)
+  const stats = `SPS min ${minSps.toFixed(1)}, median ${medianSps.toFixed(1)}, p10 ${lowerPercentileSps.toFixed(1)}`
+  const freshProgress = hasFreshConversionProgress(packets, requestedDurationMs)
 
   let verdict: Verdict
   let summary: string
 
-  if (avgSps === 0 || flagRatio > 0.5) {
+  if (!freshProgress) {
     verdict = 'fail'
-    summary = avgSps === 0
-      ? 'No data received — sensor not responding'
-      : `${Math.round(flagRatio * 100)}% of readings had errors`
-  } else if (flagRatio > 0) {
+    summary = `Insufficient fresh conversion progress - ${stats}`
+  } else if (errorPacketRatio > 0.5 || zeroSpsRatio > 0.5 || noProgressRatio > 0.5) {
+    verdict = 'fail'
+    summary = `${Math.round(Math.max(errorPacketRatio, zeroSpsRatio, noProgressRatio) * 100)}% of readings failed connection-health checks - ${stats}`
+  } else if (errorPacketRatio > 0 || zeroSpsRatio >= 0.2 || noProgressRatio >= 0.2 || lowerPercentileSps === 0) {
     verdict = 'warning'
-    summary = `${timeoutCount} timeouts, ${oorCount} out-of-range in ${packets.length} readings`
+    summary = `${timeoutCount} timeouts, ${oorCount} out-of-range, ${zeroSpsCount} zero-SPS readings - ${stats}`
   } else {
     verdict = 'pass'
-    summary = `No errors, sampling rate stable at ${avgSps.toFixed(1)}/s`
+    summary = `Connection healthy - ${stats}`
   }
 
   const overridable = verdict === 'fail' ? true : undefined

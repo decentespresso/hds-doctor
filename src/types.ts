@@ -9,6 +9,11 @@ export interface DebugPacket {
   readIndex: number       // uint8
   samplesInUse: number    // uint8
   resetReason: number     // uint8, raw esp_reset_reason() code captured at boot
+  protocolVersion: number
+  conversionSequence: number
+  lastConversionTimestamp: number
+  validSamples: number
+  configuredSamplesInUse: number
   dataOutOfRange: boolean
   signalTimeout: boolean
   tareInProgress: boolean

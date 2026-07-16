@@ -28,7 +28,13 @@ function buildPacket(overrides: Partial<Record<string, number>> = {}): Uint8Arra
   arr[23] = overrides.samplesInUse ?? 10
   // Reset reason (byte 24)
   arr[24] = overrides.resetReason ?? 0
-  // Bytes 25-37 reserved (zero)
+  arr[25] = overrides.protocolVersion ?? 1
+  view.setUint32(26, overrides.conversionSequence ?? 0)
+  view.setUint32(30, overrides.lastConversionTimestamp ?? 0)
+  arr[34] = overrides.validSamples ?? 0
+  arr[35] = overrides.configuredSamplesInUse ?? 0
+  arr[36] = 0
+  arr[37] = 0
   // Flags: none
   arr[38] = overrides.flags ?? 0x00
   // Tare times
@@ -62,10 +68,35 @@ describe('decodeDebugPacket', () => {
     expect(result!.readIndex).toBe(5)
     expect(result!.samplesInUse).toBe(10)
     expect(result!.resetReason).toBe(0)
+    expect(result!.protocolVersion).toBe(1)
+    expect(result!.conversionSequence).toBe(0)
+    expect(result!.lastConversionTimestamp).toBe(0)
+    expect(result!.validSamples).toBe(0)
+    expect(result!.configuredSamplesInUse).toBe(0)
     expect(result!.dataOutOfRange).toBe(false)
     expect(result!.signalTimeout).toBe(false)
     expect(result!.tareInProgress).toBe(false)
     expect(result!.tareTimes).toBe(0)
+  })
+
+  it('decodes the golden freshness-capable 41-byte packet', () => {
+    const packet = new Uint8Array([
+      0x03, 0x25, 0x01, 0x02, 0x03, 0x04,
+      0x00, 0x00, 0xC3, 0x50, 0x00, 0x00, 0xC2, 0x88,
+      0x00, 0x00, 0x00, 0x64, 0x04, 0xD2, 0x03, 0xE8,
+      0x05, 0x0A, 0x00, 0x01, 0x0A, 0x0B, 0x0C, 0x0D,
+      0x10, 0x20, 0x30, 0x40, 0x03, 0x04, 0x00, 0x00,
+      0x00, 0x00, 0xEB,
+    ])
+    const result = decodeDebugPacket(packet)
+    expect(result).toMatchObject({
+      timestamp: 0x01020304,
+      protocolVersion: 1,
+      conversionSequence: 0x0A0B0C0D,
+      lastConversionTimestamp: 0x10203040,
+      validSamples: 3,
+      configuredSamplesInUse: 4,
+    })
   })
 
   it('returns null for wrong length', () => {

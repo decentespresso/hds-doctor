@@ -171,7 +171,7 @@ const App = {
     this.transport.onPacket = prevOnPacket
 
     const noiseResult = evaluateNoiseStability(packets)
-    const connResult = evaluateConnectionHealth(packets)
+    const connResult = evaluateConnectionHealth(packets, DURATION_MS)
     const results: TestResult[] = [noiseResult, connResult]
     const overall = overallVerdict(results)
     const summary = `Collected ${packets.length} readings in 10 seconds`
@@ -232,7 +232,7 @@ const App = {
           result = evaluateNoiseStability(firstPackets)
           break
         case 'connection-health':
-          result = evaluateConnectionHealth(firstPackets)
+          result = evaluateConnectionHealth(firstPackets, test.collectionDurationMs)
           break
         case 'load-cell-bond':
           result = evaluateLoadCellBond(firstPackets, secondPackets)
