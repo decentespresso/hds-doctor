@@ -696,7 +696,7 @@ export const UI = {
               <span class="report-test-expand">&#9660;</span>
             </div>
             <div class="report-test-packets hidden" id="report-packets-${i}">
-              ${r.rawPatternDiagnostic && r.rawPatternDiagnostic.pattern !== 'responsive' ? `
+              ${r.rawPatternDiagnostic && r.rawPatternDiagnostic.pattern !== 'normal' ? `
                 <div class="raw-pattern-tip">
                   <span class="raw-pattern-label">Pattern: <strong>${r.rawPatternDiagnostic.pattern}</strong></span>
                   <p class="raw-pattern-desc">${r.rawPatternDiagnostic.description}</p>

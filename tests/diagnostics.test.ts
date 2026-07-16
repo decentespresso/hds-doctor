@@ -35,6 +35,16 @@ describe('evaluateNoiseStability', () => {
     const result = evaluateNoiseStability(packets)
     expect(result.verdict).toBe('fail')
   })
+
+  it('fails readiness for a flagged positive ADC rail', () => {
+    const packets = Array.from({ length: 10 }, () => makePacket({
+      rawValue: 0x7FFFFF,
+      dataOutOfRange: true,
+    }))
+    const result = evaluateNoiseStability(packets)
+    expect(result.verdict).toBe('fail')
+    expect(result.rawPatternDiagnostic?.pattern).toBe('rail-positive')
+  })
 })
 
 describe('evaluateConnectionHealth', () => {
@@ -122,6 +132,23 @@ describe('evaluateLoadCellBond', () => {
     const result = evaluateLoadCellBond(empty, loaded)
     expect(result.verdict).toBe('warning')
     expect(result.overridable).not.toBe(true)
+  })
+
+  it('uses standard deviation in ADC counts for loaded variability', () => {
+    const empty = Array.from({ length: 5 }, () => makePacket({ smoothedValue: 1000 }))
+    const loaded = [50000, 50100, 49900, 50000, 50000].map(smoothedValue =>
+      makePacket({ smoothedValue })
+    )
+    const result = evaluateLoadCellBond(empty, loaded)
+    expect(result.verdict).toBe('pass')
+  })
+
+  it('fails readiness for a flagged negative ADC rail', () => {
+    const empty = Array.from({ length: 3 }, () => makePacket({ rawValue: -0x800000, dataOutOfRange: true }))
+    const loaded = Array.from({ length: 3 }, () => makePacket({ rawValue: 0x800000, dataOutOfRange: true }))
+    const result = evaluateLoadCellBond(empty, loaded)
+    expect(result.verdict).toBe('fail')
+    expect(result.rawPatternDiagnostic?.pattern).toBe('rail-negative')
   })
 })
 

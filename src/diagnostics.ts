@@ -25,9 +25,12 @@ export function evaluateNoiseStability(packets: DebugPacket[]): TestResult {
   if (stdDev < 25) {
     verdict = 'pass'
     // If pattern is saturated (pinned to rail), override — indicates open/short hardware fault
-    if (rawDiagnostic.pattern === 'saturated-high' || rawDiagnostic.pattern === 'saturated-low') {
+    if (rawDiagnostic.pattern === 'rail-positive' || rawDiagnostic.pattern === 'rail-negative') {
+      verdict = 'fail'
+      summary = `ADC ${rawDiagnostic.pattern} at ${rawDiagnostic.rawValueHex} - readiness failed`
+    } else if (rawDiagnostic.pattern === 'stuck-constant') {
       verdict = 'warning'
-      summary = `Low noise (${stdDev.toFixed(1)}) but ADC appears stuck at ${rawDiagnostic.rawValueHex} — may indicate disconnected load cell, cold joint, or dead VREF`
+      summary = `ADC held constant at ${rawDiagnostic.rawValueHex} - check sensor response`
     } else {
       summary = `Noise level ${stdDev.toFixed(1)} — excellent stability`
     }
@@ -96,16 +99,27 @@ export function evaluateLoadCellBond(
   const delta = Math.abs(loadedAvg - emptyAvg)
 
   const loadedValues = loadedPackets.map(p => p.smoothedValue)
-  const loadedVariance = loadedValues.reduce((s, v) => s + (v - loadedAvg) ** 2, 0) / loadedValues.length
+  const loadedStdDev = Math.sqrt(loadedValues.reduce((s, v) => s + (v - loadedAvg) ** 2, 0) / loadedValues.length)
 
   // Classify raw ADC pattern for differential diagnosis
   const rawDiagnostic = classifyRawPattern(rawPackets)
+
+  if (rawDiagnostic.pattern === 'rail-positive' || rawDiagnostic.pattern === 'rail-negative') {
+    return {
+      testId: 'load-cell-bond',
+      verdict: 'fail',
+      summary: `ADC ${rawDiagnostic.pattern} at ${rawDiagnostic.rawValueHex} - readiness failed`,
+      rawPackets,
+      overridable: true,
+      rawPatternDiagnostic: rawDiagnostic,
+    }
+  }
 
   let verdict: Verdict
   let summary: string
   let overridable: boolean | undefined
 
-  if (loadedVariance > 500) {
+  if (loadedStdDev > 500) {
     verdict = 'fail'
     summary = `Erratic readings — unstable connection`
     overridable = true
